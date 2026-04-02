@@ -13,7 +13,7 @@ services:
     volumes:
       - model-cache:/models
     environment:
-      - MODEL_SIZE=${MODEL_SIZE:-medium}
+      - MODEL_SIZE=${MODEL_SIZE:-large-v3-turbo}
       - DEVICE=${DEVICE:-cpu}
       - COMPUTE_TYPE=${COMPUTE_TYPE:-int8}
       - LANGUAGE=${LANGUAGE:-}
@@ -23,9 +23,9 @@ services:
       - VAD_MIN_SPEECH_MS=${VAD_MIN_SPEECH_MS:-250}
       - MAX_CLIENTS=${MAX_CLIENTS:-10}
       - MAX_CONNECTION_TIME=${MAX_CONNECTION_TIME:-600}
-      - MAX_CONNECTIONS=${MAX_CONNECTIONS:-0}
-      - SESSION_TIMEOUT_SEC=${SESSION_TIMEOUT_SEC:-0}
-      - SILENCE_TIMEOUT_SEC=${SILENCE_TIMEOUT_SEC:-0}
+      - MAX_CONNECTIONS=${MAX_CONNECTIONS:-3}
+      - SESSION_TIMEOUT_SEC=${SESSION_TIMEOUT_SEC:-60}
+      - SILENCE_TIMEOUT_SEC=${SILENCE_TIMEOUT_SEC:-5}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     deploy:
       resources:

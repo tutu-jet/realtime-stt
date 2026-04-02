@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Model
-    model_size: str = "medium"
+    model_size: str = "large-v3-turbo"
     device: str = "auto"
     compute_type: str = "int8"
     model_cache_dir: str = "/models"
@@ -31,9 +31,9 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # Connection limits
-    max_connections: int = 0        # 0 = unlimited (max_clients takes precedence if set)
-    session_timeout_sec: float = 0  # 0 = no timeout (overrides max_connection_time if set)
-    silence_timeout_sec: float = 0  # 0 = disabled; close if no speech within this many seconds
+    max_connections: int = 3        # 0 = unlimited (max_clients takes precedence if set)
+    session_timeout_sec: float = 60  # 0 = no timeout (overrides max_connection_time if set)
+    silence_timeout_sec: float = 5  # 0 = disabled; close if no speech within this many seconds
 
     class Config:
         env_file = ".env"
