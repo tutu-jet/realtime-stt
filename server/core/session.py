@@ -33,7 +33,9 @@ async def handle_session(websocket: WebSocket, settings) -> None:
 
     await websocket.accept()
 
-    if _active_connections >= settings.max_clients:
+    # Enforce connection limit (use max_connections if set, else max_clients)
+    effective_max = settings.max_connections if settings.max_connections else settings.max_clients
+    if _active_connections >= effective_max:
         err = ErrorMessage(uid="", code="MAX_CLIENTS_REACHED", message="Server is at capacity.")
         await websocket.send_text(err.model_dump_json())
         await websocket.close()
@@ -74,13 +76,17 @@ async def handle_session(websocket: WebSocket, settings) -> None:
         pipeline = AudioPipeline(session_state, send_queue, settings)
         pipeline.start()
 
+        # Determine effective session timeout
+        session_timeout = settings.session_timeout_sec if settings.session_timeout_sec else settings.max_connection_time
+        silence_timeout = settings.silence_timeout_sec if settings.silence_timeout_sec else None
+
         try:
             await asyncio.wait_for(
-                _run_session(websocket, pipeline, send_queue, session_state, uid),
-                timeout=settings.max_connection_time,
+                _run_session(websocket, pipeline, send_queue, session_state, uid, silence_timeout),
+                timeout=session_timeout,
             )
         except asyncio.TimeoutError:
-            err = ErrorMessage(uid=uid, code="MAX_CONNECTION_TIME_EXCEEDED", message="Connection time limit reached.")
+            err = ErrorMessage(uid=uid, code="SESSION_TIMEOUT", message="Session time limit reached.")
             await websocket.send_text(err.model_dump_json())
 
     except WebSocketDisconnect:
@@ -100,10 +106,11 @@ async def _run_session(
     send_queue: asyncio.Queue,
     session_state: SessionState,
     uid: str,
+    silence_timeout: float | None,
 ) -> None:
     """Run receive and send loops concurrently."""
     receive_task = asyncio.create_task(
-        _receive_loop(websocket, pipeline, send_queue, session_state, uid),
+        _receive_loop(websocket, pipeline, send_queue, session_state, uid, silence_timeout),
         name=f"recv-{uid}",
     )
     send_task = asyncio.create_task(
@@ -130,40 +137,79 @@ async def _receive_loop(
     send_queue: asyncio.Queue,
     session_state: SessionState,
     uid: str,
+    silence_timeout: float | None,
 ) -> None:
     """Receive audio frames and control messages from the client."""
-    while True:
-        msg = await websocket.receive()
-        if msg["type"] == "websocket.disconnect":
-            break
+    receive_task = asyncio.create_task(websocket.receive(), name=f"ws-recv-{uid}")
+    try:
+        while True:
+            # Check silence timeout if enabled
+            if silence_timeout is not None and pipeline.silence_duration_sec >= silence_timeout:
+                receive_task.cancel()
+                try:
+                    await receive_task
+                except (asyncio.CancelledError, Exception):
+                    pass
+                err = ErrorMessage(uid=uid, code="SILENCE_TIMEOUT", message=f"No speech detected for {silence_timeout}s.")
+                await websocket.send_text(err.model_dump_json())
+                await websocket.close(1008)
+                return
 
-        if msg["type"] == "websocket.receive":
-            if msg.get("bytes"):
-                await pipeline.feed(msg["bytes"])
-            elif msg.get("text"):
-                text = msg["text"].strip()
-                if text == "END_OF_AUDIO":
-                    logger.info(f"[{uid}] END_OF_AUDIO received, finalizing…")
-                    await pipeline.finalize()
+            wait_timeout = 1.0 if silence_timeout is not None else None
+            try:
+                done, _ = await asyncio.wait({receive_task}, timeout=wait_timeout)
+            except Exception:
+                receive_task.cancel()
+                try:
+                    await receive_task
+                except (asyncio.CancelledError, Exception):
+                    pass
+                raise
 
-                    lines = [
-                        SegmentMessage(
-                            text=seg.text,
-                            start=seg.start,
-                            end=seg.end,
-                            detected_language=seg.language,
-                            no_speech_prob=seg.no_speech_prob,
+            if not done:
+                # Poll interval elapsed — re-check silence timeout
+                continue
+
+            msg = receive_task.result()
+            receive_task = asyncio.create_task(websocket.receive(), name=f"ws-recv-{uid}")
+
+            if msg["type"] == "websocket.disconnect":
+                break
+
+            if msg["type"] == "websocket.receive":
+                if msg.get("bytes"):
+                    await pipeline.feed(msg["bytes"])
+                elif msg.get("text"):
+                    text = msg["text"].strip()
+                    if text == "END_OF_AUDIO":
+                        logger.info(f"[{uid}] END_OF_AUDIO received, finalizing…")
+                        await pipeline.finalize()
+
+                        lines = [
+                            SegmentMessage(
+                                text=seg.text,
+                                start=seg.start,
+                                end=seg.end,
+                                detected_language=seg.language,
+                                no_speech_prob=seg.no_speech_prob,
+                            )
+                            for seg in session_state.segments
+                        ]
+                        done_msg = ReadyToStopMessage(
+                            uid=uid,
+                            lines=lines,
+                            buffer_transcription="",
                         )
-                        for seg in session_state.segments
-                    ]
-                    done_msg = ReadyToStopMessage(
-                        uid=uid,
-                        lines=lines,
-                        buffer_transcription="",
-                    )
-                    await send_queue.put(done_msg.model_dump_json())
-                    await send_queue.put(None)  # signal send loop to stop
-                    break
+                        await send_queue.put(done_msg.model_dump_json())
+                        await send_queue.put(None)  # signal send loop to stop
+                        break
+    finally:
+        if not receive_task.done():
+            receive_task.cancel()
+            try:
+                await receive_task
+            except (asyncio.CancelledError, Exception):
+                pass
 
 
 async def _send_loop(websocket: WebSocket, send_queue: asyncio.Queue, uid: str) -> None:

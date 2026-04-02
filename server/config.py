@@ -30,6 +30,11 @@ class Settings(BaseSettings):
     max_connection_time: int = 600
     log_level: str = "INFO"
 
+    # Connection limits
+    max_connections: int = 0        # 0 = unlimited (max_clients takes precedence if set)
+    session_timeout_sec: float = 0  # 0 = no timeout (overrides max_connection_time if set)
+    silence_timeout_sec: float = 0  # 0 = disabled; close if no speech within this many seconds
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

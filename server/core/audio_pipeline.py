@@ -62,10 +62,20 @@ class AudioPipeline:
         self._interim_task: Optional[asyncio.Task] = None
         self._closed = False
 
+        # Silence tracking for silence_timeout_sec
+        self._silence_start_time: Optional[float] = None  # wall-clock time silence began
+
     def start(self) -> None:
         """Start background worker tasks."""
         self._worker_task = asyncio.create_task(self._transcription_worker(), name="transcription-worker")
         self._interim_task = asyncio.create_task(self._interim_sender(), name="interim-sender")
+
+    @property
+    def silence_duration_sec(self) -> float:
+        """Seconds of continuous silence. 0.0 if speech is active or no audio yet."""
+        if self._silence_start_time is None:
+            return 0.0
+        return max(0.0, time.monotonic() - self._silence_start_time)
 
     async def feed(self, raw_data: bytes) -> None:
         """Feed raw audio bytes (float32 PCM or AAC-ADTS) into the pipeline."""
@@ -101,6 +111,7 @@ class AudioPipeline:
                 self._speech_frames += 1
                 self._speech_buffer.append(frame_f32)
                 self._pipeline_state = PipelineState.COLLECTING
+                self._silence_start_time = None  # speech resumed, reset silence timer
             else:
                 if self._pipeline_state == PipelineState.COLLECTING:
                     self._silence_frames += 1
@@ -109,6 +120,9 @@ class AudioPipeline:
 
                     if self._silence_frames >= self._silence_threshold_frames:
                         await self._commit_chunk()
+                        # Chunk committed: speech→silence transition, start silence timer
+                        if self._silence_start_time is None:
+                            self._silence_start_time = time.monotonic()
 
             # Force commit if segment is too long
             buffered_duration = sum(len(f) for f in self._speech_buffer) / SAMPLE_RATE

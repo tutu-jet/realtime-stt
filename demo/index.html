@@ -742,8 +742,15 @@ registerProcessor('pcm-processor', PCMProcessor);
       }
 
       if (msg.type === 'error') {
-        setStatus('错误: ' + msg.message, '');
-        stopRecording();
+        const codeLabels = {
+          'SESSION_TIMEOUT':     '会话超时',
+          'SILENCE_TIMEOUT':     '静音超时，已自动断开',
+          'MAX_CLIENTS_REACHED': '服务器已满，请稍后重试',
+          'MODEL_NOT_READY':     '模型加载中，请稍后重试',
+        };
+        const label = codeLabels[msg.code] || msg.message;
+        setStatus('错误: ' + label, '');
+        stopRecordingNoSend();
         return;
       }
 
@@ -816,6 +823,16 @@ registerProcessor('pcm-processor', PCMProcessor);
         // Give server 3s to finalise, then close
         setTimeout(() => ws && ws.close(), 3000);
       }
+      _cleanupAudio();
+    }
+
+    // Called when server already closed the session (error/timeout) — don't send END_OF_AUDIO
+    function stopRecordingNoSend() {
+      if (ws) ws.close();
+      _cleanupAudio();
+    }
+
+    function _cleanupAudio() {
       if (mediaStream) {
         mediaStream.getTracks().forEach(t => t.stop());
         mediaStream = null;
