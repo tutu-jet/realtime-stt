@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>实时语音转文字 Demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-base: #13172a;
+      --surface-0: #1a1f36;
+      --surface-1: #222740;
+      --surface-2: #2c3154;
+      --border-subtle: rgba(99,102,241,0.18);
+      --border-focus: rgba(99,102,241,0.55);
+      --accent: #6366f1;
+      --accent-hover: #5254cc;
+      --accent-dim: rgba(99,102,241,0.18);
+      --accent-glow: rgba(99,102,241,0.3);
+      --accent-light: #a5b4fc;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --text-primary: #f0f4ff;
+      --text-secondary: #a8b8d0;
+      --text-muted: #7a90ab;
+      --shadow-card: 0 4px 6px -1px rgba(0,0,0,0.2), 0 10px 24px -4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06);
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 48px;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 28px;
+      text-align: center;
+    }
+    .header-icon {
+      width: 48px;
+      height: 48px;
+      background: var(--accent-dim);
+      border: 1px solid var(--border-focus);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 4px;
+    }
+    header h1 {
+      font-size: 1.65rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+    .subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface-1);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      width: 100%;
+      max-width: 760px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-card);
+      backdrop-filter: blur(12px);
+    }
+
+    .section-title {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    /* ── Form controls ── */
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-right: 4px;
+      white-space: nowrap;
+    }
+
+    input[type="text"], select {
+      background: var(--surface-0);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      padding: 8px 10px;
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"] { flex: 1; min-width: 200px; }
+    input[type="text"]:focus, select:focus { border-color: var(--border-focus); }
+    select { cursor: pointer; }
+    select option { background: var(--surface-1); }
+
+    /* ── Status dot ── */
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #4b5563;
+      display: inline-block;
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .status-dot.connected { background: var(--success); animation: pulse 1.5s infinite; }
+    .status-dot.recording { background: var(--danger); animation: pulse 0.8s infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    /* ── Canvas waveform ── */
+    #waveform-canvas {
+      display: block;
+      width: 100%;
+      height: 72px;
+      border-radius: var(--radius-md);
+      background: var(--surface-0);
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 14px;
+    }
+    #meter-bar { display: none; }
+
+    /* ── Buttons ── */
+    .btn {
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 10px 22px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s, background 0.15s, box-shadow 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.38; cursor: not-allowed; transform: none; }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 12px var(--accent-glow);
+    }
+    .btn-primary:not(:disabled):hover {
+      background: var(--accent-hover);
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+    .btn-danger  { background: var(--danger); color: #fff; }
+    .btn-danger:not(:disabled):hover { background: #dc2626; }
+    .btn-ghost   {
+      background: var(--surface-2);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+    }
+    .btn-ghost:not(:disabled):hover { background: var(--surface-0); color: var(--text-primary); }
+    .btn-sm      { padding: 7px 14px; font-size: 0.8rem; border-radius: var(--radius-sm); }
+
+    /* ── Controls card layout ── */
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+    #status-text { color: var(--text-secondary); }
+    #timer { font-variant-numeric: tabular-nums; color: var(--text-muted); }
+
+    .btn-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    /* ── Transcript ── */
+    #transcript-box {
+      min-height: 200px;
+      max-height: 420px;
+      overflow-y: auto;
+      background: var(--surface-0);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      font-size: 1.05rem;
+      line-height: 1.85;
+      word-break: break-word;
+    }
+    #transcript-box::-webkit-scrollbar { width: 6px; }
+    #transcript-box::-webkit-scrollbar-track { background: transparent; }
+    #transcript-box::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 3px; }
+    #transcript-box::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+
+    .seg-final   { color: var(--text-primary); }
+    .seg-interim {
+      display: block;
+      color: var(--accent-light);
+      font-style: italic;
+      border-left: 2px solid var(--accent);
+      padding-left: 10px;
+      margin-top: 6px;
+      opacity: 0.85;
+    }
+    .cursor {
+      display: inline-block;
+      width: 2px; height: 1.1em;
+      background: var(--accent);
+      vertical-align: middle;
+      margin-left: 2px;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .lang-badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: var(--accent-dim);
+      color: var(--accent-light);
+      border: 1px solid rgba(99,102,241,0.25);
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .info-row {
+      display: flex;
+      gap: 16px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* ── Shortcuts hint ── */
+    .shortcuts-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-align: center;
+      letter-spacing: 0.02em;
+      margin-top: -4px;
+      margin-bottom: 14px;
+    }
+    .shortcuts-hint kbd {
+      display: inline-block;
+      background: var(--surface-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: inherit;
+      font-size: 0.68rem;
+      color: var(--text-secondary);
+    }
+
+    /* ── Mobile FAB ── */
+    .mobile-fab {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 12px 16px;
+      padding-bottom: calc(12px + env(safe-area-inset-bottom));
+      background: linear-gradient(to top, var(--surface-0) 60%, transparent);
+      gap: 10px;
+      z-index: 100;
+    }
+    .mobile-fab button {
+      flex: 1;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .mobile-fab button:disabled { opacity: 0.38; cursor: not-allowed; }
+    #btn-start-fab { background: var(--accent); color: #fff; }
+    #btn-stop-fab  { background: var(--danger); color: #fff; }
+
+    /* ── Mobile ── */
+    @media (max-width: 599px) {
+      body { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+
+      .mobile-fab { display: flex; }
+
+      .btn-row { display: none; }
+
+      input[type="text"], select { min-height: 44px; font-size: 1rem; }
+
+      .row { flex-direction: column; align-items: stretch; }
+      .row label { margin-bottom: -4px; }
+      .row > .btn { align-self: flex-start; }
+
+      header h1 { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="2" width="6" height="12" rx="3"/>
+        <path d="M5 10a7 7 0 0 0 14 0"/>
+        <line x1="12" y1="19" x2="12" y2="22"/>
+        <line x1="8" y1="22" x2="16" y2="22"/>
+      </svg>
+    </div>
+    <h1>实时语音转文字</h1>
+    <p class="subtitle">Powered by faster-whisper large-v3-turbo</p>
+  </header>
+
+  <!-- Connection settings -->
+  <div class="card">
+    <div class="section-title">连接设置</div>
+    <div class="row">
+      <label>服务器地址</label>
+      <input type="text" id="server-url" value="ws://localhost:9090/asr" />
+      <button class="btn btn-ghost btn-sm" id="btn-test">测试连接</button>
+    </div>
+    <div class="row" style="margin-top:12px;">
+      <label>语言</label>
+      <select id="sel-lang">
+        <option value="">自动检测</option>
+        <option value="zh">中文</option>
+        <option value="en">英语</option>
+        <option value="ja">日语</option>
+        <option value="ko">韩语</option>
+        <option value="fr">法语</option>
+        <option value="de">德语</option>
+        <option value="es">西班牙语</option>
+      </select>
+      <label>任务</label>
+      <select id="sel-task">
+        <option value="transcribe">转写</option>
+        <option value="translate">翻译为英文</option>
+      </select>
+      <label>VAD</label>
+      <select id="sel-vad">
+        <option value="true">开启</option>
+        <option value="false">关闭</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Controls + waveform -->
+  <div class="card">
+    <canvas id="waveform-canvas" height="72"></canvas>
+    <div id="meter-bar"></div>
+    <div class="status-row">
+      <div class="status-left">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-text">未连接</span>
+        <span id="timer" style="margin-left:8px;">00:00</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-start">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="2" width="6" height="12" rx="3"/>
+            <path d="M5 10a7 7 0 0 0 14 0"/>
+            <line x1="12" y1="19" x2="12" y2="22"/>
+          </svg>
+          开始录音
+        </button>
+        <button class="btn btn-danger" id="btn-stop" disabled>停止</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shortcuts hint -->
+  <div class="shortcuts-hint">
+    <kbd>Space</kbd> 开始/停止 &nbsp;·&nbsp; <kbd>Esc</kbd> 停止 &nbsp;·&nbsp; <kbd>C</kbd> 复制
+  </div>
+
+  <!-- Transcript -->
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div class="section-title" style="margin-bottom:0;">转写结果</div>
+      <div class="row" style="gap:8px;">
+        <button class="btn btn-ghost btn-sm" id="btn-copy">复制</button>
+        <button class="btn btn-ghost btn-sm" id="btn-clear">清空</button>
+      </div>
+    </div>
+    <div id="transcript-box"><span style="color:var(--text-muted);">点击"开始录音"后，转写内容将在此实时显示…</span></div>
+    <div class="info-row">
+      <span id="info-lang">检测语言: –</span>
+      <span id="info-segs">段落数: 0</span>
+      <span id="info-dur">音频时长: 0s</span>
+    </div>
+  </div>
+
+  <!-- Mobile FAB -->
+  <div class="mobile-fab">
+    <button id="btn-start-fab">🎤 开始录音</button>
+    <button id="btn-stop-fab" disabled>停止</button>
+  </div>
+
+  <script>
+  (() => {
+    // ── State ────────────────────────────────────────────────────────────────
+    let ws = null;
+    let audioCtx = null;
+    let workletNode = null;
+    let mediaStream = null;
+    let analyserNode = null;
+    let meterRaf = null;
+    let timerInterval = null;
+    let startTime = 0;
+    let finalSegments = [];  // [{text, lang}]
+    let interimText = '';
+    let uid = '';
+    let handshakeDone = false;
+
+    // ── DOM refs ─────────────────────────────────────────────────────────────
+    const btnStart   = document.getElementById('btn-start');
+    const btnStop    = document.getElementById('btn-stop');
+    const btnTest    = document.getElementById('btn-test');
+    const btnCopy    = document.getElementById('btn-copy');
+    const btnClear   = document.getElementById('btn-clear');
+    const statusDot  = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const meterBar   = document.getElementById('meter-bar');
+    const timerEl    = document.getElementById('timer');
+    const transcriptBox = document.getElementById('transcript-box');
+    const infoLang   = document.getElementById('info-lang');
+    const infoSegs   = document.getElementById('info-segs');
+    const infoDur    = document.getElementById('info-dur');
+    const selLang    = document.getElementById('sel-lang');
+    const selTask    = document.getElementById('sel-task');
+    const selVad     = document.getElementById('sel-vad');
+    const serverUrl  = document.getElementById('server-url');
+    const canvas     = document.getElementById('waveform-canvas');
+    const ctx2d      = canvas.getContext('2d');
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function uuidv4() {
+      return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+    }
+
+    function setStatus(label, mode) {
+      statusText.textContent = label;
+      statusDot.className = 'status-dot' + (mode ? ' ' + mode : '');
+    }
+
+    function formatTime(ms) {
+      const s = Math.floor(ms / 1000);
+      const m = Math.floor(s / 60);
+      return String(m).padStart(2,'0') + ':' + String(s % 60).padStart(2,'0');
+    }
+
+    function renderTranscript() {
+      if (finalSegments.length === 0 && !interimText) {
+        transcriptBox.innerHTML = '<span style="color:var(--text-muted);">点击"开始录音"后，转写内容将在此实时显示…</span>';
+        return;
+      }
+      let html = '';
+      for (const seg of finalSegments) {
+        html += `<span class="lang-badge">${seg.lang || '?'}</span>`;
+        html += `<span class="seg-final">${escHtml(seg.text)}</span> `;
+      }
+      if (interimText) {
+        html += `<span class="seg-interim">${escHtml(interimText)}</span>`;
+        html += '<span class="cursor"></span>';
+      }
+      transcriptBox.innerHTML = html;
+      transcriptBox.scrollTop = transcriptBox.scrollHeight;
+    }
+
+    function escHtml(t) {
+      return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // ── Canvas waveform ───────────────────────────────────────────────────────
+    let idleRaf = null;
+    let idlePhase = 0;
+
+    function resizeCanvas() {
+      canvas.width = canvas.offsetWidth * devicePixelRatio;
+      canvas.height = canvas.offsetHeight * devicePixelRatio;
+    }
+
+    function drawWaveform(dataArray) {
+      resizeCanvas();
+      const W = canvas.width, H = canvas.height;
+      ctx2d.clearRect(0, 0, W, H);
+
+      const grad = ctx2d.createLinearGradient(0, 0, W, 0);
+      grad.addColorStop(0, 'rgba(99,102,241,0.8)');
+      grad.addColorStop(0.5, 'rgba(165,180,252,0.95)');
+      grad.addColorStop(1, 'rgba(99,102,241,0.8)');
+
+      const fillGrad = ctx2d.createLinearGradient(0, 0, 0, H);
+      fillGrad.addColorStop(0, 'rgba(99,102,241,0.18)');
+      fillGrad.addColorStop(1, 'rgba(99,102,241,0.0)');
+
+      ctx2d.beginPath();
+      const sliceW = W / dataArray.length;
+      let x = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        const v = dataArray[i] / 128.0;
+        const y = (v * H) / 2;
+        if (i === 0) ctx2d.moveTo(x, y);
+        else ctx2d.lineTo(x, y);
+        x += sliceW;
+      }
+      ctx2d.lineTo(W, H / 2);
+
+      // fill
+      ctx2d.lineTo(W, H);
+      ctx2d.lineTo(0, H);
+      ctx2d.closePath();
+      ctx2d.fillStyle = fillGrad;
+      ctx2d.fill();
+
+      // line
+      ctx2d.beginPath();
+      x = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        const v = dataArray[i] / 128.0;
+        const y = (v * H) / 2;
+        if (i === 0) ctx2d.moveTo(x, y);
+        else ctx2d.lineTo(x, y);
+        x += sliceW;
+      }
+      ctx2d.strokeStyle = grad;
+      ctx2d.lineWidth = 2 * devicePixelRatio;
+      ctx2d.lineJoin = 'round';
+      ctx2d.stroke();
+    }
+
+    function drawIdleFrame() {
+      resizeCanvas();
+      const W = canvas.width, H = canvas.height;
+      ctx2d.clearRect(0, 0, W, H);
+
+      const amp = H * 0.06;
+      const points = 128;
+      const grad = ctx2d.createLinearGradient(0, 0, W, 0);
+      grad.addColorStop(0, 'rgba(99,102,241,0.25)');
+      grad.addColorStop(0.5, 'rgba(165,180,252,0.35)');
+      grad.addColorStop(1, 'rgba(99,102,241,0.25)');
+
+      ctx2d.beginPath();
+      for (let i = 0; i <= points; i++) {
+        const x = (i / points) * W;
+        const y = H / 2 + Math.sin(i / points * Math.PI * 4 + idlePhase) * amp;
+        if (i === 0) ctx2d.moveTo(x, y);
+        else ctx2d.lineTo(x, y);
+      }
+      ctx2d.strokeStyle = grad;
+      ctx2d.lineWidth = 1.5 * devicePixelRatio;
+      ctx2d.lineJoin = 'round';
+      ctx2d.stroke();
+
+      idlePhase += 0.025;
+    }
+
+    function startIdleAnimation() {
+      if (idleRaf) cancelAnimationFrame(idleRaf);
+      function loop() {
+        drawIdleFrame();
+        idleRaf = requestAnimationFrame(loop);
+      }
+      loop();
+    }
+
+    function stopIdleAnimation() {
+      if (idleRaf) { cancelAnimationFrame(idleRaf); idleRaf = null; }
+    }
+
+    // ── Audio level meter ─────────────────────────────────────────────────────
+    function startMeter() {
+      stopIdleAnimation();
+      const buf = new Uint8Array(analyserNode.frequencyBinCount);
+      function loop() {
+        analyserNode.getByteTimeDomainData(buf);
+        // original meter bar (hidden, kept for JS compatibility)
+        let sum = 0;
+        for (let i = 0; i < buf.length; i++) {
+          const v = (buf[i] - 128) / 128;
+          sum += v * v;
+        }
+        const rms = Math.sqrt(sum / buf.length);
+        meterBar.style.width = Math.min(100, rms * 300) + '%';
+        // Canvas waveform
+        drawWaveform(buf);
+        meterRaf = requestAnimationFrame(loop);
+      }
+      loop();
+    }
+
+    function stopMeter() {
+      if (meterRaf) cancelAnimationFrame(meterRaf);
+      meterBar.style.width = '0%';
+      startIdleAnimation();
+    }
+
+    // ── AudioWorklet processor (inline blob) ──────────────────────────────────
+    const WORKLET_CODE = `
+class PCMProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this._buf = [];
+    this._target = 1600; // 100ms at 16kHz
+  }
+  process(inputs) {
+    const ch = inputs[0] && inputs[0][0];
+    if (!ch) return true;
+    for (let i = 0; i < ch.length; i++) this._buf.push(ch[i]);
+    while (this._buf.length >= this._target) {
+      const chunk = new Float32Array(this._buf.splice(0, this._target));
+      this.port.postMessage(chunk.buffer, [chunk.buffer]);
+    }
+    return true;
+  }
+}
+registerProcessor('pcm-processor', PCMProcessor);
+`;
+
+    async function setupAudio() {
+      // Request mic
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        }
+      });
+
+      // Use requested 16kHz or fall back to system default
+      const actualSR = mediaStream.getAudioTracks()[0].getSettings().sampleRate || 44100;
+      audioCtx = new AudioContext({ sampleRate: 16000 });
+      // If browser couldn't honour 16kHz, we'll resample in worklet below
+      const targetSR = audioCtx.sampleRate; // should be 16000
+
+      // Load worklet
+      const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' });
+      const blobURL = URL.createObjectURL(blob);
+      await audioCtx.audioWorklet.addModule(blobURL);
+      URL.revokeObjectURL(blobURL);
+
+      const source = audioCtx.createMediaStreamSource(mediaStream);
+
+      // Analyser for level meter
+      analyserNode = audioCtx.createAnalyser();
+      analyserNode.fftSize = 256;
+      source.connect(analyserNode);
+
+      workletNode = new AudioWorkletNode(audioCtx, 'pcm-processor');
+      workletNode.port.onmessage = (e) => {
+        if (ws && ws.readyState === WebSocket.OPEN && handshakeDone) {
+          ws.send(e.data);
+        }
+      };
+      source.connect(workletNode);
+    }
+
+    // ── WebSocket ────────────────────────────────────────────────────────────
+    function connectWS(url) {
+      ws = new WebSocket(url);
+      ws.binaryType = 'arraybuffer';
+
+      ws.onopen = () => {
+        setStatus('已连接，等待就绪', 'connected');
+        // Send config
+        uid = uuidv4();
+        const cfg = {
+          uid,
+          language: selLang.value || null,
+          task: selTask.value,
+          use_vad: selVad.value === 'true',
+          max_clients: 10,
+          max_connection_time: 600,
+        };
+        ws.send(JSON.stringify(cfg));
+      };
+
+      ws.onmessage = (e) => {
+        if (typeof e.data !== 'string') return;
+        let msg;
+        try { msg = JSON.parse(e.data); } catch { return; }
+        handleServerMessage(msg);
+      };
+
+      ws.onerror = () => setStatus('连接错误', '');
+      ws.onclose = () => {
+        setStatus('已断开', '');
+        handshakeDone = false;
+      };
+    }
+
+    function handleServerMessage(msg) {
+      if (msg.type === 'config') {
+        handshakeDone = true;
+        setStatus('录音中…', 'recording');
+        // Start timer
+        startTime = Date.now();
+        timerInterval = setInterval(() => {
+          timerEl.textContent = formatTime(Date.now() - startTime);
+        }, 500);
+        startMeter();
+        return;
+      }
+
+      if (msg.type === 'error') {
+        setStatus('错误: ' + msg.message, '');
+        stopRecording();
+        return;
+      }
+
+      if (msg.type === 'ready_to_stop') {
+        setStatus('处理完成', 'connected');
+        interimText = '';
+        // Add any remaining final lines
+        if (msg.lines && msg.lines.length) {
+          for (const seg of msg.lines) {
+            // Avoid duplication — check if last segment already has this text
+            const last = finalSegments[finalSegments.length - 1];
+            if (!last || last.text !== seg.text) {
+              finalSegments.push({ text: seg.text, lang: seg.detected_language });
+            }
+          }
+        }
+        renderTranscript();
+        infoSegs.textContent = `段落数: ${finalSegments.length}`;
+        return;
+      }
+
+      // Transcription result
+      if (msg.is_final) {
+        interimText = '';
+        if (msg.lines) {
+          for (const seg of msg.lines) {
+            const last = finalSegments[finalSegments.length - 1];
+            if (!last || last.text !== seg.text) {
+              finalSegments.push({ text: seg.text, lang: seg.detected_language });
+              infoLang.textContent = `检测语言: ${seg.detected_language || '–'}`;
+            }
+          }
+        }
+      } else {
+        // Interim
+        interimText = msg.buffer_transcription || '';
+        if (msg.language) infoLang.textContent = `检测语言: ${msg.language}`;
+      }
+      infoSegs.textContent = `段落数: ${finalSegments.length}`;
+      renderTranscript();
+    }
+
+    // ── Start / Stop ─────────────────────────────────────────────────────────
+    btnStart.addEventListener('click', async () => {
+      btnStart.disabled = true;
+      btnStop.disabled = false;
+      finalSegments = [];
+      interimText = '';
+      handshakeDone = false;
+      renderTranscript();
+      infoLang.textContent = '检测语言: –';
+      infoSegs.textContent = '段落数: 0';
+
+      try {
+        await setupAudio();
+        setStatus('正在连接…', '');
+        connectWS(serverUrl.value.trim());
+      } catch (err) {
+        setStatus('错误: ' + err.message, '');
+        btnStart.disabled = false;
+        btnStop.disabled = true;
+      }
+    });
+
+    btnStop.addEventListener('click', stopRecording);
+
+    function stopRecording() {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send('END_OF_AUDIO');
+        // Give server 3s to finalise, then close
+        setTimeout(() => ws && ws.close(), 3000);
+      }
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(t => t.stop());
+        mediaStream = null;
+      }
+      if (workletNode) { workletNode.disconnect(); workletNode = null; }
+      if (audioCtx) { audioCtx.close(); audioCtx = null; }
+      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+      stopMeter();
+      setStatus('已停止', '');
+      btnStart.disabled = false;
+      btnStop.disabled = true;
+    }
+
+    // ── Test connection ───────────────────────────────────────────────────────
+    btnTest.addEventListener('click', async () => {
+      const url = serverUrl.value.trim().replace(/^ws/, 'http');
+      const healthUrl = url.replace(/\/asr$/, '') + '/health';
+      btnTest.disabled = true;
+      btnTest.textContent = '检测中…';
+      try {
+        const res = await fetch(healthUrl);
+        const data = await res.json();
+        if (data.status === 'ok') {
+          btnTest.textContent = `✓ 正常 (${data.model})`;
+        } else {
+          btnTest.textContent = `⚠ ${data.status}`;
+        }
+      } catch {
+        btnTest.textContent = '✗ 无法连接';
+      }
+      setTimeout(() => {
+        btnTest.textContent = '测试连接';
+        btnTest.disabled = false;
+      }, 3000);
+    });
+
+    // ── Copy / Clear ──────────────────────────────────────────────────────────
+    btnCopy.addEventListener('click', () => {
+      const text = finalSegments.map(s => s.text).join('\n') + (interimText ? '\n' + interimText : '');
+      navigator.clipboard.writeText(text).then(() => {
+        btnCopy.textContent = '已复制!';
+        setTimeout(() => btnCopy.textContent = '复制', 1500);
+      });
+    });
+
+    btnClear.addEventListener('click', () => {
+      finalSegments = [];
+      interimText = '';
+      renderTranscript();
+      infoLang.textContent = '检测语言: –';
+      infoSegs.textContent = '段落数: 0';
+    });
+
+    // ── Keyboard shortcuts ────────────────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (!btnStart.disabled) btnStart.click();
+        else if (!btnStop.disabled) btnStop.click();
+      }
+      if (e.code === 'Escape') {
+        if (!btnStop.disabled) btnStop.click();
+      }
+      if (e.code === 'KeyC' && !e.metaKey && !e.ctrlKey) {
+        if (!btnCopy.disabled) btnCopy.click();
+      }
+    });
+
+    // ── FAB sync ──────────────────────────────────────────────────────────────
+    const fabStart = document.getElementById('btn-start-fab');
+    const fabStop  = document.getElementById('btn-stop-fab');
+
+    fabStart.addEventListener('click', () => btnStart.click());
+    fabStop.addEventListener('click', () => btnStop.click());
+
+    function syncFab() {
+      fabStart.disabled = btnStart.disabled;
+      fabStop.disabled = btnStop.disabled;
+    }
+
+    const fabObserver = new MutationObserver(syncFab);
+    fabObserver.observe(btnStart, { attributes: true, attributeFilter: ['disabled'] });
+    fabObserver.observe(btnStop,  { attributes: true, attributeFilter: ['disabled'] });
+    syncFab();
+
+    // ── Init idle animation ───────────────────────────────────────────────────
+    resizeCanvas();
+    startIdleAnimation();
+    window.addEventListener('resize', () => { if (!meterRaf) drawIdleFrame(); });
+
+  })();
+  </script>
+</body>
+</html>

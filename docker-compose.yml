@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  stt-server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: realtime-stt:latest
+    container_name: stt-server
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - model-cache:/models
+    environment:
+      - MODEL_SIZE=${MODEL_SIZE:-medium}
+      - DEVICE=${DEVICE:-cpu}
+      - COMPUTE_TYPE=${COMPUTE_TYPE:-int8}
+      - LANGUAGE=${LANGUAGE:-}
+      - VAD_BACKEND=${VAD_BACKEND:-webrtcvad}
+      - VAD_AGGRESSIVENESS=${VAD_AGGRESSIVENESS:-2}
+      - VAD_SILENCE_THRESHOLD_MS=${VAD_SILENCE_THRESHOLD_MS:-600}
+      - VAD_MIN_SPEECH_MS=${VAD_MIN_SPEECH_MS:-250}
+      - MAX_CLIENTS=${MAX_CLIENTS:-10}
+      - MAX_CONNECTION_TIME=${MAX_CONNECTION_TIME:-600}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # Uncomment for GPU support (requires NVIDIA Container Toolkit):
+  # stt-server-gpu:
+  #   extends:
+  #     service: stt-server
+  #   runtime: nvidia
+  #   environment:
+  #     - DEVICE=cuda
+  #     - COMPUTE_TYPE=float16
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+
+volumes:
+  model-cache:
+    driver: local
