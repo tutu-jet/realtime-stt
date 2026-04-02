@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     vad_backend: str = "webrtcvad"
     vad_aggressiveness: int = 2
     vad_frame_ms: int = 30
-    vad_silence_threshold_ms: int = 600
+    vad_silence_threshold_ms: int = 300
     vad_min_speech_ms: int = 250
 
     # Transcription

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>实时语音转文字 Demo</title>
+  <title>实时语音转文字</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -41,7 +41,6 @@
       padding: 32px 16px 48px;
     }
 
-    /* ── Header ── */
     header {
       display: flex;
       flex-direction: column;
@@ -51,166 +50,91 @@
       text-align: center;
     }
     .header-icon {
-      width: 48px;
-      height: 48px;
+      width: 48px; height: 48px;
       background: var(--accent-dim);
       border: 1px solid var(--border-focus);
       border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       margin-bottom: 4px;
     }
-    header h1 {
-      font-size: 1.65rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      color: var(--text-primary);
-    }
-    .subtitle {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      letter-spacing: 0.01em;
-    }
+    header h1 { font-size: 1.65rem; font-weight: 700; letter-spacing: -0.02em; }
+    .subtitle  { font-size: 0.8rem; color: var(--text-muted); }
 
-    /* ── Card ── */
     .card {
       background: var(--surface-1);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-lg);
       padding: 20px;
-      width: 100%;
-      max-width: 760px;
+      width: 100%; max-width: 760px;
       margin-bottom: 14px;
       box-shadow: var(--shadow-card);
-      backdrop-filter: blur(12px);
     }
 
     .section-title {
-      font-size: 0.72rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.09em;
-      color: var(--text-muted);
-      margin-bottom: 12px;
+      font-size: 0.72rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.09em;
+      color: var(--text-muted); margin-bottom: 12px;
     }
 
-    /* ── Form controls ── */
-    .row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-    }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 
-    label {
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-      margin-right: 4px;
-      white-space: nowrap;
-    }
+    label { font-size: 0.8rem; color: var(--text-secondary); margin-right: 4px; white-space: nowrap; }
 
     input[type="text"], select {
       background: var(--surface-0);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-sm);
       color: var(--text-primary);
-      padding: 8px 10px;
-      font-size: 0.85rem;
-      outline: none;
-      transition: border-color 0.2s;
+      padding: 8px 10px; font-size: 0.85rem;
+      outline: none; transition: border-color 0.2s;
     }
     input[type="text"] { flex: 1; min-width: 200px; }
     input[type="text"]:focus, select:focus { border-color: var(--border-focus); }
     select { cursor: pointer; }
     select option { background: var(--surface-1); }
 
-    /* ── Status dot ── */
     .status-dot {
       width: 8px; height: 8px; border-radius: 50%;
-      background: #4b5563;
-      display: inline-block;
-      flex-shrink: 0;
-      transition: background 0.3s;
+      background: #4b5563; display: inline-block; flex-shrink: 0; transition: background 0.3s;
     }
     .status-dot.connected { background: var(--success); animation: pulse 1.5s infinite; }
     .status-dot.recording { background: var(--danger); animation: pulse 0.8s infinite; }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.35; }
-    }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
 
-    /* ── Canvas waveform ── */
     #waveform-canvas {
-      display: block;
-      width: 100%;
-      height: 72px;
+      display: block; width: 100%; height: 72px;
       border-radius: var(--radius-md);
       background: var(--surface-0);
       border: 1px solid var(--border-subtle);
       margin-bottom: 14px;
     }
-    #meter-bar { display: none; }
 
-    /* ── Buttons ── */
     .btn {
-      border: none;
-      border-radius: var(--radius-md);
-      padding: 10px 22px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.15s, transform 0.1s, background 0.15s, box-shadow 0.15s;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      border: none; border-radius: var(--radius-md);
+      padding: 10px 22px; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; transition: opacity 0.15s, transform 0.1s, background 0.15s, box-shadow 0.15s;
+      display: inline-flex; align-items: center; gap: 6px;
     }
     .btn:active { transform: scale(0.97); }
     .btn:disabled { opacity: 0.38; cursor: not-allowed; transform: none; }
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-      box-shadow: 0 2px 12px var(--accent-glow);
-    }
-    .btn-primary:not(:disabled):hover {
-      background: var(--accent-hover);
-      box-shadow: 0 4px 20px var(--accent-glow);
-    }
+    .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 12px var(--accent-glow); }
+    .btn-primary:not(:disabled):hover { background: var(--accent-hover); }
     .btn-danger  { background: var(--danger); color: #fff; }
     .btn-danger:not(:disabled):hover { background: #dc2626; }
-    .btn-ghost   {
-      background: var(--surface-2);
-      color: var(--text-secondary);
-      border: 1px solid var(--border-subtle);
-    }
+    .btn-ghost   { background: var(--surface-2); color: var(--text-secondary); border: 1px solid var(--border-subtle); }
     .btn-ghost:not(:disabled):hover { background: var(--surface-0); color: var(--text-primary); }
     .btn-sm      { padding: 7px 14px; font-size: 0.8rem; border-radius: var(--radius-sm); }
 
-    /* ── Controls card layout ── */
-    .status-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .status-left {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.85rem;
-    }
+    .status-row  { display: flex; justify-content: space-between; align-items: center; }
+    .status-left { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; }
     #status-text { color: var(--text-secondary); }
-    #timer { font-variant-numeric: tabular-nums; color: var(--text-muted); }
+    #timer       { font-variant-numeric: tabular-nums; color: var(--text-muted); }
+    .btn-row     { display: flex; justify-content: center; gap: 10px; }
 
-    .btn-row {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-    }
-
-    /* ── Transcript ── */
+    /* ── Transcript editor ── */
     #transcript-box {
       min-height: 200px;
-      max-height: 420px;
+      max-height: 480px;
       overflow-y: auto;
       background: var(--surface-0);
       border: 1px solid var(--border-subtle);
@@ -219,114 +143,61 @@
       font-size: 1.05rem;
       line-height: 1.85;
       word-break: break-word;
+      outline: none;
+      white-space: pre-wrap;
+      cursor: text;
+      transition: border-color 0.2s;
     }
+    #transcript-box:focus { border-color: var(--border-focus); }
     #transcript-box::-webkit-scrollbar { width: 6px; }
     #transcript-box::-webkit-scrollbar-track { background: transparent; }
     #transcript-box::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 3px; }
-    #transcript-box::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
 
-    .seg-final   { color: var(--text-primary); }
-    .seg-interim {
-      display: block;
-      color: var(--accent-light);
+    /* interim span injected by JS */
+    #transcript-box .interim {
+      color: var(--text-muted);
       font-style: italic;
-      border-left: 2px solid var(--accent);
-      padding-left: 10px;
-      margin-top: 6px;
-      opacity: 0.85;
     }
-    .cursor {
-      display: inline-block;
-      width: 2px; height: 1.1em;
-      background: var(--accent);
-      vertical-align: middle;
-      margin-left: 2px;
-      animation: blink 1s step-end infinite;
-    }
-    @keyframes blink { 50% { opacity: 0; } }
 
-    .lang-badge {
-      display: inline-block;
-      font-size: 0.68rem;
-      padding: 1px 6px;
-      border-radius: 4px;
-      background: var(--accent-dim);
-      color: var(--accent-light);
-      border: 1px solid rgba(99,102,241,0.25);
-      margin-right: 6px;
-      vertical-align: middle;
-    }
+    .placeholder { color: var(--text-muted); pointer-events: none; user-select: none; }
 
     .info-row {
-      display: flex;
-      gap: 16px;
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-top: 10px;
-      flex-wrap: wrap;
+      display: flex; gap: 16px;
+      font-size: 0.75rem; color: var(--text-muted);
+      margin-top: 10px; flex-wrap: wrap;
     }
 
-    /* ── Shortcuts hint ── */
     .shortcuts-hint {
-      font-size: 0.72rem;
-      color: var(--text-muted);
-      text-align: center;
-      letter-spacing: 0.02em;
-      margin-top: -4px;
-      margin-bottom: 14px;
+      font-size: 0.72rem; color: var(--text-muted);
+      text-align: center; letter-spacing: 0.02em;
+      margin-top: -4px; margin-bottom: 14px;
     }
     .shortcuts-hint kbd {
-      display: inline-block;
-      background: var(--surface-2);
-      border: 1px solid var(--border-subtle);
-      border-radius: 3px;
-      padding: 1px 5px;
-      font-family: inherit;
-      font-size: 0.68rem;
-      color: var(--text-secondary);
+      display: inline-block; background: var(--surface-2);
+      border: 1px solid var(--border-subtle); border-radius: 3px;
+      padding: 1px 5px; font-family: inherit; font-size: 0.68rem; color: var(--text-secondary);
     }
 
-    /* ── Mobile FAB ── */
     .mobile-fab {
-      display: none;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 12px 16px;
-      padding-bottom: calc(12px + env(safe-area-inset-bottom));
+      display: none; position: fixed; bottom: 0; left: 0; right: 0;
+      padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom));
       background: linear-gradient(to top, var(--surface-0) 60%, transparent);
-      gap: 10px;
-      z-index: 100;
+      gap: 10px; z-index: 100;
     }
     .mobile-fab button {
-      flex: 1;
-      border: none;
-      border-radius: var(--radius-md);
-      padding: 14px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.15s;
+      flex: 1; border: none; border-radius: var(--radius-md);
+      padding: 14px; font-size: 1rem; font-weight: 600; cursor: pointer;
     }
     .mobile-fab button:disabled { opacity: 0.38; cursor: not-allowed; }
     #btn-start-fab { background: var(--accent); color: #fff; }
     #btn-stop-fab  { background: var(--danger); color: #fff; }
 
-    /* ── Mobile ── */
     @media (max-width: 599px) {
       body { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
-
       .mobile-fab { display: flex; }
-
       .btn-row { display: none; }
-
       input[type="text"], select { min-height: 44px; font-size: 1rem; }
-
       .row { flex-direction: column; align-items: stretch; }
-      .row label { margin-bottom: -4px; }
-      .row > .btn { align-self: flex-start; }
-
       header h1 { font-size: 1.3rem; }
     }
   </style>
@@ -343,10 +214,9 @@
       </svg>
     </div>
     <h1>实时语音转文字</h1>
-    <p class="subtitle">Powered by faster-whisper large-v3-turbo</p>
+    <p class="subtitle">Powered by faster-whisper</p>
   </header>
 
-  <!-- Connection settings -->
   <div class="card">
     <div class="section-title">连接设置</div>
     <div class="row">
@@ -371,18 +241,11 @@
         <option value="transcribe">转写</option>
         <option value="translate">翻译为英文</option>
       </select>
-      <label>VAD</label>
-      <select id="sel-vad">
-        <option value="true">开启</option>
-        <option value="false">关闭</option>
-      </select>
     </div>
   </div>
 
-  <!-- Controls + waveform -->
   <div class="card">
     <canvas id="waveform-canvas" height="72"></canvas>
-    <div id="meter-bar"></div>
     <div class="status-row">
       <div class="status-left">
         <span class="status-dot" id="status-dot"></span>
@@ -403,12 +266,10 @@
     </div>
   </div>
 
-  <!-- Shortcuts hint -->
   <div class="shortcuts-hint">
     <kbd>Space</kbd> 开始/停止 &nbsp;·&nbsp; <kbd>Esc</kbd> 停止 &nbsp;·&nbsp; <kbd>C</kbd> 复制
   </div>
 
-  <!-- Transcript -->
   <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
       <div class="section-title" style="margin-bottom:0;">转写结果</div>
@@ -417,15 +278,15 @@
         <button class="btn btn-ghost btn-sm" id="btn-clear">清空</button>
       </div>
     </div>
-    <div id="transcript-box"><span style="color:var(--text-muted);">点击"开始录音"后，转写内容将在此实时显示…</span></div>
+    <div id="transcript-box" contenteditable="true" spellcheck="false">
+      <span class="placeholder">点击"开始录音"后，转写内容将在此实时显示，也可直接在此编辑…</span>
+    </div>
     <div class="info-row">
-      <span id="info-lang">检测语言: –</span>
       <span id="info-segs">段落数: 0</span>
       <span id="info-dur">音频时长: 0s</span>
     </div>
   </div>
 
-  <!-- Mobile FAB -->
   <div class="mobile-fab">
     <button id="btn-start-fab">🎤 开始录音</button>
     <button id="btn-stop-fab" disabled>停止</button>
@@ -435,495 +296,371 @@
   (() => {
     // ── State ────────────────────────────────────────────────────────────────
     let ws = null;
-    let audioCtx = null;
-    let workletNode = null;
-    let mediaStream = null;
-    let analyserNode = null;
-    let meterRaf = null;
-    let timerInterval = null;
-    let startTime = 0;
-    let finalSegments = [];  // [{text, lang}]
-    let interimText = '';
-    let uid = '';
-    let handshakeDone = false;
+    let audioCtx = null, workletNode = null, mediaStream = null;
+    let analyserNode = null, meterRaf = null;
+    let timerInterval = null, startTime = 0;
+    let uid = '', handshakeDone = false;
+    let segCount = 0;
 
-    // ── DOM refs ─────────────────────────────────────────────────────────────
-    const btnStart   = document.getElementById('btn-start');
-    const btnStop    = document.getElementById('btn-stop');
-    const btnTest    = document.getElementById('btn-test');
-    const btnCopy    = document.getElementById('btn-copy');
-    const btnClear   = document.getElementById('btn-clear');
-    const statusDot  = document.getElementById('status-dot');
-    const statusText = document.getElementById('status-text');
-    const meterBar   = document.getElementById('meter-bar');
-    const timerEl    = document.getElementById('timer');
-    const transcriptBox = document.getElementById('transcript-box');
-    const infoLang   = document.getElementById('info-lang');
-    const infoSegs   = document.getElementById('info-segs');
-    const infoDur    = document.getElementById('info-dur');
-    const selLang    = document.getElementById('sel-lang');
-    const selTask    = document.getElementById('sel-task');
-    const selVad     = document.getElementById('sel-vad');
-    const serverUrl  = document.getElementById('server-url');
-    const canvas     = document.getElementById('waveform-canvas');
-    const ctx2d      = canvas.getContext('2d');
+    // Insertion anchor: a zero-width bookmark node placed at recording start position
+    // All STT text is inserted relative to this anchor.
+    let anchor = null;       // Text node or element just before insertion point
+    let interimSpan = null;  // The live <span class="interim"> element
+
+    // ── DOM ──────────────────────────────────────────────────────────────────
+    const btnStart      = document.getElementById('btn-start');
+    const btnStop       = document.getElementById('btn-stop');
+    const btnTest       = document.getElementById('btn-test');
+    const btnCopy       = document.getElementById('btn-copy');
+    const btnClear      = document.getElementById('btn-clear');
+    const statusDot     = document.getElementById('status-dot');
+    const statusText    = document.getElementById('status-text');
+    const timerEl       = document.getElementById('timer');
+    const box           = document.getElementById('transcript-box');
+    const infoSegs      = document.getElementById('info-segs');
+    const selLang       = document.getElementById('sel-lang');
+    const selTask       = document.getElementById('sel-task');
+    const serverUrl     = document.getElementById('server-url');
+    const canvas        = document.getElementById('waveform-canvas');
+    const ctx2d         = canvas.getContext('2d');
 
     // ── Helpers ───────────────────────────────────────────────────────────────
     function uuidv4() {
       return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
         (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
     }
-
     function setStatus(label, mode) {
       statusText.textContent = label;
-      statusDot.className = 'status-dot' + (mode ? ' ' + mode : '');
+      statusDot.className = 'status-dot' + (mode ? ' '+mode : '');
     }
-
     function formatTime(ms) {
-      const s = Math.floor(ms / 1000);
-      const m = Math.floor(s / 60);
-      return String(m).padStart(2,'0') + ':' + String(s % 60).padStart(2,'0');
+      const s = Math.floor(ms/1000), m = Math.floor(s/60);
+      return String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
     }
 
-    function renderTranscript() {
-      if (finalSegments.length === 0 && !interimText) {
-        transcriptBox.innerHTML = '<span style="color:var(--text-muted);">点击"开始录音"后，转写内容将在此实时显示…</span>';
-        return;
+    // ── Placeholder handling ──────────────────────────────────────────────────
+    function clearPlaceholder() {
+      const ph = box.querySelector('.placeholder');
+      if (ph) ph.remove();
+    }
+    function showPlaceholder() {
+      if (box.textContent.trim() === '') {
+        box.innerHTML = '<span class="placeholder">点击"开始录音"后，转写内容将在此实时显示，也可直接在此编辑…</span>';
       }
-      let html = '';
-      for (const seg of finalSegments) {
-        html += `<span class="lang-badge">${seg.lang || '?'}</span>`;
-        html += `<span class="seg-final">${escHtml(seg.text)}</span> `;
+    }
+    box.addEventListener('focus', clearPlaceholder);
+    box.addEventListener('blur', showPlaceholder);
+
+    // ── Anchor: bookmark where to insert STT text ─────────────────────────────
+    // Called when recording starts. Saves current caret position as a sentinel node.
+    function placeAnchor() {
+      clearPlaceholder();
+
+      // Remove any existing anchor/interim
+      removeInterim();
+      if (anchor && anchor.parentNode) anchor.parentNode.removeChild(anchor);
+
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && box.contains(sel.anchorNode)) {
+        // Insert a zero-width sentinel span at caret
+        const range = sel.getRangeAt(0);
+        range.collapse(true);
+        anchor = document.createElement('span');
+        anchor.setAttribute('data-stt-anchor', '1');
+        anchor.style.cssText = 'display:inline;font-size:0;line-height:0;';
+        range.insertNode(anchor);
+      } else {
+        // No caret in box — append at end
+        anchor = document.createElement('span');
+        anchor.setAttribute('data-stt-anchor', '1');
+        anchor.style.cssText = 'display:inline;font-size:0;line-height:0;';
+        box.appendChild(anchor);
       }
-      if (interimText) {
-        html += `<span class="seg-interim">${escHtml(interimText)}</span>`;
-        html += '<span class="cursor"></span>';
-      }
-      transcriptBox.innerHTML = html;
-      transcriptBox.scrollTop = transcriptBox.scrollHeight;
     }
 
-    function escHtml(t) {
-      return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    // ── Insert / update interim span ──────────────────────────────────────────
+    function setInterim(text) {
+      if (!anchor) return;
+      const truncated = text.length > 50 ? text.slice(0, 50) + '…' : text;
+      if (!interimSpan) {
+        interimSpan = document.createElement('span');
+        interimSpan.className = 'interim';
+        // Insert immediately after anchor
+        anchor.insertAdjacentElement('afterend', interimSpan);
+      }
+      interimSpan.textContent = truncated;
+    }
+
+    function removeInterim() {
+      if (interimSpan && interimSpan.parentNode) {
+        interimSpan.parentNode.removeChild(interimSpan);
+      }
+      interimSpan = null;
+    }
+
+    // ── Commit final text at anchor position ──────────────────────────────────
+    function commitFinal(text) {
+      if (!anchor) return;
+      removeInterim();
+      // Insert text node after anchor
+      const textNode = document.createTextNode(text + ' ');
+      anchor.after(textNode);
+      // Move anchor to after the new text, so next segment appends after this one
+      textNode.after(anchor);
+      segCount++;
+      infoSegs.textContent = `段落数: ${segCount}`;
+      scrollToAnchor();
+    }
+
+    function scrollToAnchor() {
+      if (anchor) anchor.scrollIntoView({ block: 'nearest' });
     }
 
     // ── Canvas waveform ───────────────────────────────────────────────────────
-    let idleRaf = null;
-    let idlePhase = 0;
+    let idleRaf = null, idlePhase = 0;
 
     function resizeCanvas() {
       canvas.width = canvas.offsetWidth * devicePixelRatio;
       canvas.height = canvas.offsetHeight * devicePixelRatio;
     }
-
     function drawWaveform(dataArray) {
       resizeCanvas();
       const W = canvas.width, H = canvas.height;
-      ctx2d.clearRect(0, 0, W, H);
-
-      const grad = ctx2d.createLinearGradient(0, 0, W, 0);
-      grad.addColorStop(0, 'rgba(99,102,241,0.8)');
-      grad.addColorStop(0.5, 'rgba(165,180,252,0.95)');
-      grad.addColorStop(1, 'rgba(99,102,241,0.8)');
-
-      const fillGrad = ctx2d.createLinearGradient(0, 0, 0, H);
-      fillGrad.addColorStop(0, 'rgba(99,102,241,0.18)');
-      fillGrad.addColorStop(1, 'rgba(99,102,241,0.0)');
-
+      ctx2d.clearRect(0,0,W,H);
+      const grad = ctx2d.createLinearGradient(0,0,W,0);
+      grad.addColorStop(0,'rgba(99,102,241,0.8)');
+      grad.addColorStop(0.5,'rgba(165,180,252,0.95)');
+      grad.addColorStop(1,'rgba(99,102,241,0.8)');
       ctx2d.beginPath();
-      const sliceW = W / dataArray.length;
+      const sliceW = W/dataArray.length;
       let x = 0;
-      for (let i = 0; i < dataArray.length; i++) {
-        const v = dataArray[i] / 128.0;
-        const y = (v * H) / 2;
-        if (i === 0) ctx2d.moveTo(x, y);
-        else ctx2d.lineTo(x, y);
-        x += sliceW;
-      }
-      ctx2d.lineTo(W, H / 2);
-
-      // fill
-      ctx2d.lineTo(W, H);
-      ctx2d.lineTo(0, H);
-      ctx2d.closePath();
-      ctx2d.fillStyle = fillGrad;
-      ctx2d.fill();
-
-      // line
-      ctx2d.beginPath();
-      x = 0;
-      for (let i = 0; i < dataArray.length; i++) {
-        const v = dataArray[i] / 128.0;
-        const y = (v * H) / 2;
-        if (i === 0) ctx2d.moveTo(x, y);
-        else ctx2d.lineTo(x, y);
+      for (let i=0;i<dataArray.length;i++) {
+        const y = (dataArray[i]/128)*H/2;
+        i===0 ? ctx2d.moveTo(x,y) : ctx2d.lineTo(x,y);
         x += sliceW;
       }
       ctx2d.strokeStyle = grad;
-      ctx2d.lineWidth = 2 * devicePixelRatio;
+      ctx2d.lineWidth = 2*devicePixelRatio;
       ctx2d.lineJoin = 'round';
       ctx2d.stroke();
     }
-
     function drawIdleFrame() {
       resizeCanvas();
-      const W = canvas.width, H = canvas.height;
-      ctx2d.clearRect(0, 0, W, H);
-
-      const amp = H * 0.06;
-      const points = 128;
-      const grad = ctx2d.createLinearGradient(0, 0, W, 0);
-      grad.addColorStop(0, 'rgba(99,102,241,0.25)');
-      grad.addColorStop(0.5, 'rgba(165,180,252,0.35)');
-      grad.addColorStop(1, 'rgba(99,102,241,0.25)');
-
+      const W=canvas.width, H=canvas.height;
+      ctx2d.clearRect(0,0,W,H);
+      const amp = H*0.06, pts = 128;
+      const grad = ctx2d.createLinearGradient(0,0,W,0);
+      grad.addColorStop(0,'rgba(99,102,241,0.25)');
+      grad.addColorStop(0.5,'rgba(165,180,252,0.35)');
+      grad.addColorStop(1,'rgba(99,102,241,0.25)');
       ctx2d.beginPath();
-      for (let i = 0; i <= points; i++) {
-        const x = (i / points) * W;
-        const y = H / 2 + Math.sin(i / points * Math.PI * 4 + idlePhase) * amp;
-        if (i === 0) ctx2d.moveTo(x, y);
-        else ctx2d.lineTo(x, y);
+      for (let i=0;i<=pts;i++) {
+        const x=(i/pts)*W, y=H/2+Math.sin(i/pts*Math.PI*4+idlePhase)*amp;
+        i===0 ? ctx2d.moveTo(x,y) : ctx2d.lineTo(x,y);
       }
-      ctx2d.strokeStyle = grad;
-      ctx2d.lineWidth = 1.5 * devicePixelRatio;
-      ctx2d.lineJoin = 'round';
-      ctx2d.stroke();
-
-      idlePhase += 0.025;
+      ctx2d.strokeStyle=grad; ctx2d.lineWidth=1.5*devicePixelRatio;
+      ctx2d.lineJoin='round'; ctx2d.stroke();
+      idlePhase+=0.025;
     }
-
     function startIdleAnimation() {
       if (idleRaf) cancelAnimationFrame(idleRaf);
-      function loop() {
-        drawIdleFrame();
-        idleRaf = requestAnimationFrame(loop);
-      }
+      const loop = () => { drawIdleFrame(); idleRaf = requestAnimationFrame(loop); };
       loop();
     }
+    function stopIdleAnimation() { if (idleRaf) { cancelAnimationFrame(idleRaf); idleRaf=null; } }
 
-    function stopIdleAnimation() {
-      if (idleRaf) { cancelAnimationFrame(idleRaf); idleRaf = null; }
-    }
-
-    // ── Audio level meter ─────────────────────────────────────────────────────
     function startMeter() {
       stopIdleAnimation();
       const buf = new Uint8Array(analyserNode.frequencyBinCount);
-      function loop() {
-        analyserNode.getByteTimeDomainData(buf);
-        // original meter bar (hidden, kept for JS compatibility)
-        let sum = 0;
-        for (let i = 0; i < buf.length; i++) {
-          const v = (buf[i] - 128) / 128;
-          sum += v * v;
-        }
-        const rms = Math.sqrt(sum / buf.length);
-        meterBar.style.width = Math.min(100, rms * 300) + '%';
-        // Canvas waveform
-        drawWaveform(buf);
-        meterRaf = requestAnimationFrame(loop);
-      }
+      const loop = () => { analyserNode.getByteTimeDomainData(buf); drawWaveform(buf); meterRaf=requestAnimationFrame(loop); };
       loop();
     }
+    function stopMeter() { if (meterRaf) cancelAnimationFrame(meterRaf); startIdleAnimation(); }
 
-    function stopMeter() {
-      if (meterRaf) cancelAnimationFrame(meterRaf);
-      meterBar.style.width = '0%';
-      startIdleAnimation();
-    }
-
-    // ── AudioWorklet processor (inline blob) ──────────────────────────────────
+    // ── AudioWorklet ──────────────────────────────────────────────────────────
     const WORKLET_CODE = `
 class PCMProcessor extends AudioWorkletProcessor {
-  constructor() {
-    super();
-    this._buf = [];
-    this._target = 1600; // 100ms at 16kHz
-  }
+  constructor() { super(); this._buf=[]; this._target=1600; }
   process(inputs) {
-    const ch = inputs[0] && inputs[0][0];
-    if (!ch) return true;
-    for (let i = 0; i < ch.length; i++) this._buf.push(ch[i]);
-    while (this._buf.length >= this._target) {
-      const chunk = new Float32Array(this._buf.splice(0, this._target));
-      this.port.postMessage(chunk.buffer, [chunk.buffer]);
+    const ch = inputs[0]&&inputs[0][0]; if (!ch) return true;
+    for (let i=0;i<ch.length;i++) this._buf.push(ch[i]);
+    while (this._buf.length>=this._target) {
+      const chunk=new Float32Array(this._buf.splice(0,this._target));
+      this.port.postMessage(chunk.buffer,[chunk.buffer]);
     }
     return true;
   }
 }
-registerProcessor('pcm-processor', PCMProcessor);
-`;
+registerProcessor('pcm-processor',PCMProcessor);`;
 
     async function setupAudio() {
-      // Request mic
       mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          sampleRate: 16000,
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        }
+        audio: { sampleRate:16000, channelCount:1, echoCancellation:true, noiseSuppression:true, autoGainControl:true }
       });
-
-      // Use requested 16kHz or fall back to system default
-      const actualSR = mediaStream.getAudioTracks()[0].getSettings().sampleRate || 44100;
-      audioCtx = new AudioContext({ sampleRate: 16000 });
-      // If browser couldn't honour 16kHz, we'll resample in worklet below
-      const targetSR = audioCtx.sampleRate; // should be 16000
-
-      // Load worklet
-      const blob = new Blob([WORKLET_CODE], { type: 'application/javascript' });
+      audioCtx = new AudioContext({ sampleRate:16000 });
+      const blob = new Blob([WORKLET_CODE],{type:'application/javascript'});
       const blobURL = URL.createObjectURL(blob);
       await audioCtx.audioWorklet.addModule(blobURL);
       URL.revokeObjectURL(blobURL);
-
       const source = audioCtx.createMediaStreamSource(mediaStream);
-
-      // Analyser for level meter
-      analyserNode = audioCtx.createAnalyser();
-      analyserNode.fftSize = 256;
+      analyserNode = audioCtx.createAnalyser(); analyserNode.fftSize=256;
       source.connect(analyserNode);
-
-      workletNode = new AudioWorkletNode(audioCtx, 'pcm-processor');
+      workletNode = new AudioWorkletNode(audioCtx,'pcm-processor');
       workletNode.port.onmessage = (e) => {
-        if (ws && ws.readyState === WebSocket.OPEN && handshakeDone) {
-          ws.send(e.data);
-        }
+        if (ws && ws.readyState===WebSocket.OPEN && handshakeDone) ws.send(e.data);
       };
       source.connect(workletNode);
     }
 
-    // ── WebSocket ────────────────────────────────────────────────────────────
+    // ── WebSocket ─────────────────────────────────────────────────────────────
     function connectWS(url) {
       ws = new WebSocket(url);
       ws.binaryType = 'arraybuffer';
-
       ws.onopen = () => {
-        setStatus('已连接，等待就绪', 'connected');
-        // Send config
+        setStatus('已连接，等待就绪','connected');
         uid = uuidv4();
-        const cfg = {
-          uid,
-          language: selLang.value || null,
-          task: selTask.value,
-          use_vad: selVad.value === 'true',
-          max_clients: 10,
-          max_connection_time: 600,
-        };
-        ws.send(JSON.stringify(cfg));
+        ws.send(JSON.stringify({ uid, language: selLang.value||null, task: selTask.value }));
       };
-
       ws.onmessage = (e) => {
-        if (typeof e.data !== 'string') return;
-        let msg;
-        try { msg = JSON.parse(e.data); } catch { return; }
-        handleServerMessage(msg);
+        if (typeof e.data!=='string') return;
+        let msg; try { msg=JSON.parse(e.data); } catch { return; }
+        handleMsg(msg);
       };
-
-      ws.onerror = () => setStatus('连接错误', '');
-      ws.onclose = () => {
-        setStatus('已断开', '');
-        handshakeDone = false;
-      };
+      ws.onerror = () => setStatus('连接错误','');
+      ws.onclose = () => { setStatus('已断开',''); handshakeDone=false; };
     }
 
-    function handleServerMessage(msg) {
-      if (msg.type === 'config') {
-        handshakeDone = true;
-        setStatus('录音中…', 'recording');
-        // Start timer
-        startTime = Date.now();
-        timerInterval = setInterval(() => {
-          timerEl.textContent = formatTime(Date.now() - startTime);
-        }, 500);
+    function handleMsg(msg) {
+      if (msg.type==='config') {
+        handshakeDone=true;
+        setStatus('录音中…','recording');
+        startTime=Date.now();
+        timerInterval=setInterval(()=>{ timerEl.textContent=formatTime(Date.now()-startTime); },500);
         startMeter();
         return;
       }
-
-      if (msg.type === 'error') {
-        const codeLabels = {
-          'SESSION_TIMEOUT':     '会话超时',
-          'SILENCE_TIMEOUT':     '静音超时，已自动断开',
-          'MAX_CLIENTS_REACHED': '服务器已满，请稍后重试',
-          'MODEL_NOT_READY':     '模型加载中，请稍后重试',
+      if (msg.type==='error') {
+        const labels = {
+          SESSION_TIMEOUT:'会话超时', SILENCE_TIMEOUT:'静音超时',
+          MAX_CLIENTS_REACHED:'服务器已满', MODEL_NOT_READY:'模型加载中'
         };
-        const label = codeLabels[msg.code] || msg.message;
-        setStatus('错误: ' + label, '');
+        setStatus('错误: '+(labels[msg.code]||msg.message),'');
         stopRecordingNoSend();
         return;
       }
-
-      if (msg.type === 'ready_to_stop') {
-        setStatus('处理完成', 'connected');
-        interimText = '';
-        // Add any remaining final lines
-        if (msg.lines && msg.lines.length) {
-          for (const seg of msg.lines) {
-            // Avoid duplication — check if last segment already has this text
-            const last = finalSegments[finalSegments.length - 1];
-            if (!last || last.text !== seg.text) {
-              finalSegments.push({ text: seg.text, lang: seg.detected_language });
-            }
-          }
-        }
-        renderTranscript();
-        infoSegs.textContent = `段落数: ${finalSegments.length}`;
+      if (msg.type==='ready_to_stop') {
+        setStatus('处理完成','connected');
+        removeInterim();
+        // final lines come in ready_to_stop — already committed via is_final, skip duplicates
         return;
       }
-
-      // Transcription result
+      // transcription
       if (msg.is_final) {
-        interimText = '';
+        removeInterim();
         if (msg.lines) {
           for (const seg of msg.lines) {
-            const last = finalSegments[finalSegments.length - 1];
-            if (!last || last.text !== seg.text) {
-              finalSegments.push({ text: seg.text, lang: seg.detected_language });
-              infoLang.textContent = `检测语言: ${seg.detected_language || '–'}`;
-            }
+            if (seg.text && seg.text.trim()) commitFinal(seg.text.trim());
           }
         }
       } else {
-        // Interim
-        interimText = msg.buffer_transcription || '';
-        if (msg.language) infoLang.textContent = `检测语言: ${msg.language}`;
+        const buf = msg.buffer_transcription || '';
+        if (buf) setInterim(buf);
       }
-      infoSegs.textContent = `段落数: ${finalSegments.length}`;
-      renderTranscript();
     }
 
-    // ── Start / Stop ─────────────────────────────────────────────────────────
+    // ── Start / Stop ──────────────────────────────────────────────────────────
     btnStart.addEventListener('click', async () => {
-      btnStart.disabled = true;
-      btnStop.disabled = false;
-      finalSegments = [];
-      interimText = '';
-      handshakeDone = false;
-      renderTranscript();
-      infoLang.textContent = '检测语言: –';
-      infoSegs.textContent = '段落数: 0';
+      btnStart.disabled=true; btnStop.disabled=false;
+      segCount=0; infoSegs.textContent='段落数: 0';
+      handshakeDone=false;
+
+      // Place anchor at current caret (or end of box)
+      placeAnchor();
 
       try {
         await setupAudio();
-        setStatus('正在连接…', '');
+        setStatus('正在连接…','');
         connectWS(serverUrl.value.trim());
-      } catch (err) {
-        setStatus('错误: ' + err.message, '');
-        btnStart.disabled = false;
-        btnStop.disabled = true;
+      } catch(err) {
+        setStatus('错误: '+err.message,'');
+        btnStart.disabled=false; btnStop.disabled=true;
       }
     });
 
     btnStop.addEventListener('click', stopRecording);
 
     function stopRecording() {
-      if (ws && ws.readyState === WebSocket.OPEN) {
+      if (ws && ws.readyState===WebSocket.OPEN) {
         ws.send('END_OF_AUDIO');
-        // Give server 3s to finalise, then close
-        setTimeout(() => ws && ws.close(), 3000);
+        setTimeout(()=>ws&&ws.close(), 3000);
       }
       _cleanupAudio();
     }
-
-    // Called when server already closed the session (error/timeout) — don't send END_OF_AUDIO
     function stopRecordingNoSend() {
       if (ws) ws.close();
       _cleanupAudio();
     }
-
     function _cleanupAudio() {
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(t => t.stop());
-        mediaStream = null;
-      }
-      if (workletNode) { workletNode.disconnect(); workletNode = null; }
-      if (audioCtx) { audioCtx.close(); audioCtx = null; }
-      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+      if (mediaStream) { mediaStream.getTracks().forEach(t=>t.stop()); mediaStream=null; }
+      if (workletNode) { workletNode.disconnect(); workletNode=null; }
+      if (audioCtx) { audioCtx.close(); audioCtx=null; }
+      if (timerInterval) { clearInterval(timerInterval); timerInterval=null; }
+      removeInterim();
+      // Remove anchor sentinel
+      if (anchor && anchor.parentNode) anchor.parentNode.removeChild(anchor);
+      anchor=null;
       stopMeter();
-      setStatus('已停止', '');
-      btnStart.disabled = false;
-      btnStop.disabled = true;
+      setStatus('已停止','');
+      btnStart.disabled=false; btnStop.disabled=true;
     }
 
     // ── Test connection ───────────────────────────────────────────────────────
     btnTest.addEventListener('click', async () => {
-      const url = serverUrl.value.trim().replace(/^ws/, 'http');
-      const healthUrl = url.replace(/\/asr$/, '') + '/health';
-      btnTest.disabled = true;
-      btnTest.textContent = '检测中…';
+      const healthUrl = serverUrl.value.trim().replace(/^ws/,'http').replace(/\/asr$/,'')+'/health';
+      btnTest.disabled=true; btnTest.textContent='检测中…';
       try {
-        const res = await fetch(healthUrl);
-        const data = await res.json();
-        if (data.status === 'ok') {
-          btnTest.textContent = `✓ 正常 (${data.model})`;
-        } else {
-          btnTest.textContent = `⚠ ${data.status}`;
-        }
-      } catch {
-        btnTest.textContent = '✗ 无法连接';
-      }
-      setTimeout(() => {
-        btnTest.textContent = '测试连接';
-        btnTest.disabled = false;
-      }, 3000);
+        const data = await fetch(healthUrl).then(r=>r.json());
+        btnTest.textContent = data.status==='ok' ? `✓ 正常 (${data.model})` : `⚠ ${data.status}`;
+      } catch { btnTest.textContent='✗ 无法连接'; }
+      setTimeout(()=>{ btnTest.textContent='测试连接'; btnTest.disabled=false; },3000);
     });
 
     // ── Copy / Clear ──────────────────────────────────────────────────────────
     btnCopy.addEventListener('click', () => {
-      const text = finalSegments.map(s => s.text).join('\n') + (interimText ? '\n' + interimText : '');
-      navigator.clipboard.writeText(text).then(() => {
-        btnCopy.textContent = '已复制!';
-        setTimeout(() => btnCopy.textContent = '复制', 1500);
+      const text = box.innerText.replace(/\u200B/g,'').trim();
+      navigator.clipboard.writeText(text).then(()=>{
+        btnCopy.textContent='已复制!';
+        setTimeout(()=>btnCopy.textContent='复制',1500);
       });
     });
-
     btnClear.addEventListener('click', () => {
-      finalSegments = [];
-      interimText = '';
-      renderTranscript();
-      infoLang.textContent = '检测语言: –';
-      infoSegs.textContent = '段落数: 0';
+      removeInterim();
+      if (anchor && anchor.parentNode) anchor.parentNode.removeChild(anchor);
+      anchor=null;
+      box.innerHTML='<span class="placeholder">点击"开始录音"后，转写内容将在此实时显示，也可直接在此编辑…</span>';
+      segCount=0; infoSegs.textContent='段落数: 0';
     });
 
     // ── Keyboard shortcuts ────────────────────────────────────────────────────
     document.addEventListener('keydown', e => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-      if (e.code === 'Space') {
-        e.preventDefault();
-        if (!btnStart.disabled) btnStart.click();
-        else if (!btnStop.disabled) btnStop.click();
-      }
-      if (e.code === 'Escape') {
-        if (!btnStop.disabled) btnStop.click();
-      }
-      if (e.code === 'KeyC' && !e.metaKey && !e.ctrlKey) {
-        if (!btnCopy.disabled) btnCopy.click();
-      }
+      if (e.target===box || e.target.tagName==='INPUT' || e.target.tagName==='SELECT') return;
+      if (e.code==='Space') { e.preventDefault(); btnStart.disabled ? (btnStop.disabled||btnStop.click()) : btnStart.click(); }
+      if (e.code==='Escape' && !btnStop.disabled) btnStop.click();
+      if (e.code==='KeyC' && !e.metaKey && !e.ctrlKey && !btnCopy.disabled) btnCopy.click();
     });
 
     // ── FAB sync ──────────────────────────────────────────────────────────────
-    const fabStart = document.getElementById('btn-start-fab');
-    const fabStop  = document.getElementById('btn-stop-fab');
+    const fabStart=document.getElementById('btn-start-fab');
+    const fabStop=document.getElementById('btn-stop-fab');
+    fabStart.addEventListener('click',()=>btnStart.click());
+    fabStop.addEventListener('click',()=>btnStop.click());
+    const fabObs=new MutationObserver(()=>{ fabStart.disabled=btnStart.disabled; fabStop.disabled=btnStop.disabled; });
+    fabObs.observe(btnStart,{attributes:true,attributeFilter:['disabled']});
+    fabObs.observe(btnStop,{attributes:true,attributeFilter:['disabled']});
 
-    fabStart.addEventListener('click', () => btnStart.click());
-    fabStop.addEventListener('click', () => btnStop.click());
-
-    function syncFab() {
-      fabStart.disabled = btnStart.disabled;
-      fabStop.disabled = btnStop.disabled;
-    }
-
-    const fabObserver = new MutationObserver(syncFab);
-    fabObserver.observe(btnStart, { attributes: true, attributeFilter: ['disabled'] });
-    fabObserver.observe(btnStop,  { attributes: true, attributeFilter: ['disabled'] });
-    syncFab();
-
-    // ── Init idle animation ───────────────────────────────────────────────────
-    resizeCanvas();
-    startIdleAnimation();
-    window.addEventListener('resize', () => { if (!meterRaf) drawIdleFrame(); });
-
+    // ── Init ──────────────────────────────────────────────────────────────────
+    resizeCanvas(); startIdleAnimation();
+    window.addEventListener('resize',()=>{ if(!meterRaf) drawIdleFrame(); });
   })();
   </script>
 </body>
