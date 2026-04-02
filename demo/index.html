@@ -338,6 +338,8 @@
       return String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
     }
 
+    let savedRange = null;  // caret position saved before button click
+
     // ── Placeholder handling ──────────────────────────────────────────────────
     function clearPlaceholder() {
       const ph = box.querySelector('.placeholder');
@@ -349,31 +351,42 @@
       }
     }
     box.addEventListener('focus', clearPlaceholder);
-    box.addEventListener('blur', showPlaceholder);
+    box.addEventListener('blur', () => {
+      // Save caret position when box loses focus
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && box.contains(sel.anchorNode)) {
+        savedRange = sel.getRangeAt(0).cloneRange();
+      }
+      showPlaceholder();
+    });
+    box.addEventListener('keyup', () => {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) savedRange = sel.getRangeAt(0).cloneRange();
+    });
+    box.addEventListener('mouseup', () => {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) savedRange = sel.getRangeAt(0).cloneRange();
+    });
 
     // ── Anchor: bookmark where to insert STT text ─────────────────────────────
-    // Called when recording starts. Saves current caret position as a sentinel node.
     function placeAnchor() {
       clearPlaceholder();
-
-      // Remove any existing anchor/interim
       removeInterim();
       if (anchor && anchor.parentNode) anchor.parentNode.removeChild(anchor);
 
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0 && box.contains(sel.anchorNode)) {
-        // Insert a zero-width sentinel span at caret
-        const range = sel.getRangeAt(0);
-        range.collapse(true);
-        anchor = document.createElement('span');
-        anchor.setAttribute('data-stt-anchor', '1');
-        anchor.style.cssText = 'display:inline;font-size:0;line-height:0;';
-        range.insertNode(anchor);
+      anchor = document.createElement('span');
+      anchor.setAttribute('data-stt-anchor', '1');
+      anchor.style.cssText = 'display:inline;font-size:0;line-height:0;';
+
+      if (savedRange && box.contains(savedRange.startContainer)) {
+        try {
+          const range = savedRange.cloneRange();
+          range.collapse(true);
+          range.insertNode(anchor);
+        } catch(e) {
+          box.appendChild(anchor);
+        }
       } else {
-        // No caret in box — append at end
-        anchor = document.createElement('span');
-        anchor.setAttribute('data-stt-anchor', '1');
-        anchor.style.cssText = 'display:inline;font-size:0;line-height:0;';
         box.appendChild(anchor);
       }
     }
@@ -605,10 +618,7 @@ registerProcessor('pcm-processor',PCMProcessor);`;
       if (workletNode) { workletNode.disconnect(); workletNode=null; }
       if (audioCtx) { audioCtx.close(); audioCtx=null; }
       if (timerInterval) { clearInterval(timerInterval); timerInterval=null; }
-      removeInterim();
-      // Remove anchor sentinel
-      if (anchor && anchor.parentNode) anchor.parentNode.removeChild(anchor);
-      anchor=null;
+      // Don't remove anchor here — ready_to_stop may still arrive after cleanup
       stopMeter();
       setStatus('已停止','');
       btnStart.disabled=false; btnStop.disabled=true;
