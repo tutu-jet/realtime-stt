@@ -352,12 +352,8 @@
     }
     box.addEventListener('focus', clearPlaceholder);
     box.addEventListener('blur', () => {
-      // Save caret position when box loses focus
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0 && box.contains(sel.anchorNode)) {
-        savedRange = sel.getRangeAt(0).cloneRange();
-      }
       showPlaceholder();
+    });
     });
     box.addEventListener('keyup', () => {
       const sel = window.getSelection();
