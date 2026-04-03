@@ -12,6 +12,7 @@ services:
       - "9090:9090"
     volumes:
       - model-cache:/models
+      - ./demo:/app/demo:ro
     environment:
       - MODEL_SIZE=${MODEL_SIZE:-large-v3-turbo}
       - DEVICE=${DEVICE:-cpu}

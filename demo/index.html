@@ -354,7 +354,6 @@
     box.addEventListener('blur', () => {
       showPlaceholder();
     });
-    });
     box.addEventListener('keyup', () => {
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) savedRange = sel.getRangeAt(0).cloneRange();
