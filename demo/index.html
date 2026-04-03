@@ -202,6 +202,48 @@
       margin-top: 10px; flex-wrap: wrap;
     }
 
+    /* ── Mode tabs ── */
+    .mode-tabs {
+      position: relative; z-index: 1;
+      display: flex; gap: 4px;
+      background: rgba(118,118,128,0.12);
+      border-radius: 10px; padding: 3px;
+      width: 100%; max-width: 760px;
+      margin-bottom: 12px;
+    }
+    .mode-tab {
+      flex: 1; border: none; background: transparent;
+      border-radius: 8px; padding: 8px 0;
+      font-size: 0.84rem; font-weight: 500; cursor: pointer;
+      color: var(--text-muted); transition: all 0.18s;
+      font-family: inherit;
+    }
+    .mode-tab.active {
+      background: rgba(255,255,255,0.9);
+      color: var(--text-primary);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      font-weight: 600;
+    }
+    .mode-panel { display: none; }
+    .mode-panel.active { display: contents; }
+
+    /* ── HTTP mode ── */
+    .http-rec-btn {
+      width: 64px; height: 64px; border-radius: 50%; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; transition: transform 0.12s, box-shadow 0.15s;
+      flex-shrink: 0;
+    }
+    .http-rec-btn:active { transform: scale(0.93); }
+    .http-rec-btn.idle    { background: var(--accent); box-shadow: 0 4px 16px var(--accent-glow); }
+    .http-rec-btn.recording { background: var(--danger); box-shadow: 0 4px 16px rgba(255,59,48,0.3);
+                              animation: pulse 0.85s infinite; }
+    .http-rec-btn:disabled { opacity: 0.32; cursor: not-allowed; animation: none; }
+
+    .http-controls { display: flex; align-items: center; gap: 16px; }
+    .http-status   { font-size: 0.85rem; color: var(--text-secondary); }
+    .http-timer    { font-variant-numeric: tabular-nums; font-size: 0.82rem; color: var(--text-muted); }
+
     .shortcuts-hint {
       position: relative; z-index: 1;
       font-size: 0.71rem; color: var(--text-muted);
@@ -287,30 +329,56 @@
     </div>
   </div>
 
-  <div class="card">
-    <canvas id="waveform-canvas" height="72"></canvas>
-    <div class="status-row">
-      <div class="status-left">
-        <span class="status-dot" id="status-dot"></span>
-        <span id="status-text">未连接</span>
-        <span id="timer" style="margin-left:8px;">00:00</span>
+  <!-- Mode tabs -->
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="tab-ws">实时流式 (WebSocket)</button>
+    <button class="mode-tab" id="tab-http">录音上传 (HTTP)</button>
+  </div>
+
+  <!-- WebSocket panel -->
+  <div class="mode-panel active" id="panel-ws">
+    <div class="card">
+      <canvas id="waveform-canvas" height="72"></canvas>
+      <div class="status-row">
+        <div class="status-left">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">未连接</span>
+          <span id="timer" style="margin-left:8px;">00:00</span>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-start">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="2" width="6" height="12" rx="3"/>
+              <path d="M5 10a7 7 0 0 0 14 0"/>
+              <line x1="12" y1="19" x2="12" y2="22"/>
+            </svg>
+            开始录音
+          </button>
+          <button class="btn btn-danger" id="btn-stop" disabled>停止</button>
+        </div>
       </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" id="btn-start">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="9" y="2" width="6" height="12" rx="3"/>
-            <path d="M5 10a7 7 0 0 0 14 0"/>
-            <line x1="12" y1="19" x2="12" y2="22"/>
-          </svg>
-          开始录音
-        </button>
-        <button class="btn btn-danger" id="btn-stop" disabled>停止</button>
-      </div>
+    </div>
+
+    <div class="shortcuts-hint">
+      <kbd>Space</kbd> 开始/停止 &nbsp;·&nbsp; <kbd>Esc</kbd> 停止 &nbsp;·&nbsp; <kbd>C</kbd> 复制
     </div>
   </div>
 
-  <div class="shortcuts-hint">
-    <kbd>Space</kbd> 开始/停止 &nbsp;·&nbsp; <kbd>Esc</kbd> 停止 &nbsp;·&nbsp; <kbd>C</kbd> 复制
+  <!-- HTTP panel -->
+  <div class="mode-panel" id="panel-http">
+    <div class="card">
+      <div class="http-controls">
+        <button class="http-rec-btn idle" id="btn-http-rec" title="点击开始录音">🎤</button>
+        <div>
+          <div class="http-status" id="http-status">点击麦克风开始录音</div>
+          <div class="http-timer" id="http-timer">00:00</div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="btn-http-send" disabled style="margin-left:auto;">
+          发送转录
+        </button>
+      </div>
+      <audio id="http-audio" controls style="display:none;width:100%;margin-top:14px;border-radius:8px;"></audio>
+    </div>
   </div>
 
   <div class="card">
@@ -689,7 +757,114 @@ registerProcessor('pcm-processor',PCMProcessor);`;
       segCount=0; infoSegs.textContent='段落数: 0';
     });
 
-    // ── Keyboard shortcuts ────────────────────────────────────────────────────
+    // ── Tab switching ─────────────────────────────────────────────────────────
+    const tabWs      = document.getElementById('tab-ws');
+    const tabHttp    = document.getElementById('tab-http');
+    const panelWs    = document.getElementById('panel-ws');
+    const panelHttp  = document.getElementById('panel-http');
+    tabWs.addEventListener('click', () => {
+      tabWs.classList.add('active'); tabHttp.classList.remove('active');
+      panelWs.classList.add('active'); panelHttp.classList.remove('active');
+    });
+    tabHttp.addEventListener('click', () => {
+      tabHttp.classList.add('active'); tabWs.classList.remove('active');
+      panelHttp.classList.add('active'); panelWs.classList.remove('active');
+    });
+
+    // ── HTTP mode ─────────────────────────────────────────────────────────────
+    const btnHttpRec  = document.getElementById('btn-http-rec');
+    const btnHttpSend = document.getElementById('btn-http-send');
+    const httpStatus  = document.getElementById('http-status');
+    const httpTimer   = document.getElementById('http-timer');
+    const httpAudio   = document.getElementById('http-audio');
+
+    let httpRecording = false;
+    let httpMediaRecorder = null;
+    let httpChunks = [];
+    let httpStream = null;
+    let httpTimerInterval = null;
+    let httpStartTime = 0;
+    let httpBlob = null;
+
+    function httpSetStatus(text) { httpStatus.textContent = text; }
+    function httpFormatTime(ms) {
+      const s = Math.floor(ms/1000), m = Math.floor(s/60);
+      return String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+    }
+
+    btnHttpRec.addEventListener('click', async () => {
+      if (!httpRecording) {
+        // Start recording — reset previous state
+        if (httpAudio.src) { URL.revokeObjectURL(httpAudio.src); httpAudio.src=''; httpAudio.style.display='none'; }
+        httpBlob = null;
+        try {
+          httpStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch(e) {
+          httpSetStatus('无法访问麦克风: ' + e.message); return;
+        }
+        httpChunks = [];
+        httpMediaRecorder = new MediaRecorder(httpStream);
+        httpMediaRecorder.ondataavailable = e => { if (e.data.size>0) httpChunks.push(e.data); };
+        httpMediaRecorder.start(100);
+        httpRecording = true;
+        btnHttpRec.className = 'http-rec-btn recording';
+        btnHttpRec.title = '点击停止录音';
+        btnHttpRec.textContent = '⏹';
+        btnHttpSend.disabled = true;
+        httpSetStatus('录音中…');
+        httpStartTime = Date.now();
+        httpTimerInterval = setInterval(() => { httpTimer.textContent = httpFormatTime(Date.now()-httpStartTime); }, 500);
+      } else {
+        // Stop recording
+        httpMediaRecorder.addEventListener('stop', () => {
+          httpBlob = new Blob(httpChunks, { type: httpMediaRecorder.mimeType || 'audio/webm' });
+          const url = URL.createObjectURL(httpBlob);
+          httpAudio.src = url;
+          httpAudio.style.display = 'block';
+        }, { once: true });
+        httpMediaRecorder.stop();
+        httpStream.getTracks().forEach(t => t.stop());
+        clearInterval(httpTimerInterval);
+        httpRecording = false;
+        btnHttpRec.className = 'http-rec-btn idle';
+        btnHttpRec.title = '点击重新录音';
+        btnHttpRec.textContent = '🎤';
+        httpSetStatus('录音完成，回听后可发送转录');
+        btnHttpSend.disabled = false;
+      }
+    });
+
+    btnHttpSend.addEventListener('click', async () => {
+      if (!httpBlob) return;
+      const baseUrl = serverUrl.value.trim().replace(/^ws/,'http').replace(/\/asr$/, '');
+      const form = new FormData();
+      form.append('file', httpBlob, 'recording.webm');
+      if (selLang.value) form.append('language', selLang.value);
+      form.append('task', selTask.value);
+
+      btnHttpSend.disabled = true;
+      btnHttpSend.textContent = '转录中…';
+      httpSetStatus('正在上传并转录…');
+      placeAnchor();
+      try {
+        const res = await fetch(baseUrl + '/transcribe', { method: 'POST', body: form });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error||res.statusText); }
+        const data = await res.json();
+        if (data.text && data.text.trim()) {
+          clearPlaceholder();
+          commitFinal(data.text.trim());
+          httpSetStatus(`转录完成 · 语言: ${data.language} · 时长: ${data.duration.toFixed(1)}s`);
+        } else {
+          httpSetStatus('未检测到语音内容');
+        }
+      } catch(e) {
+        httpSetStatus('错误: ' + e.message);
+      }
+      btnHttpSend.textContent = '发送转录';
+      btnHttpSend.disabled = false;
+    });
+
+    // ── Keyboard shortcuts ─────────────────────────────────────────────────────
     document.addEventListener('keydown', e => {
       if (e.target===box || e.target.tagName==='INPUT' || e.target.tagName==='SELECT') return;
       if (e.code==='Space') { e.preventDefault(); btnStart.disabled ? (btnStop.disabled||btnStop.click()) : btnStart.click(); }

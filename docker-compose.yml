@@ -12,8 +12,10 @@ services:
       - "9090:9090"
     volumes:
       - model-cache:/models
-      - ./demo:/app/demo:ro
+      - ./server:/app:ro
+      - ./demo:/demo:ro
     environment:
+      - DEMO_PATH=/demo/index.html
       - MODEL_SIZE=${MODEL_SIZE:-large-v3-turbo}
       - DEVICE=${DEVICE:-cpu}
       - COMPUTE_TYPE=${COMPUTE_TYPE:-int8}

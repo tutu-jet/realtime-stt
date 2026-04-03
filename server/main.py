@@ -1,8 +1,10 @@
+import io
 import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket
+import numpy as np
+from fastapi import FastAPI, File, Form, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
@@ -16,7 +18,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DEMO_PATH = os.path.join(os.path.dirname(__file__), "..", "demo", "index.html")
+DEMO_PATH = os.environ.get("DEMO_PATH", os.path.join(os.path.dirname(__file__), "..", "demo", "index.html"))
 
 
 @asynccontextmanager
@@ -62,6 +64,47 @@ async def health():
         "device": settings.device,
         "active_connections": session_mgr.get_active_connections(),
         "max_clients": settings.max_clients,
+    }
+
+
+@app.post("/transcribe")
+async def transcribe_upload(
+    file: UploadFile = File(...),
+    language: str = Form(None),
+    task: str = Form("transcribe"),
+):
+    if not tr.is_ready():
+        return JSONResponse({"error": "Model not ready"}, status_code=503)
+    data = await file.read()
+    try:
+        import av
+        container = av.open(io.BytesIO(data))
+        frames = []
+        resampler = av.AudioResampler(format="fltp", layout="mono", rate=16000)
+        for frame in container.decode(audio=0):
+            for rf in resampler.resample(frame):
+                frames.append(rf.to_ndarray()[0])
+        container.close()
+        audio = np.concatenate(frames).astype(np.float32) if frames else np.zeros(1, dtype=np.float32)
+    except Exception as e:
+        return JSONResponse({"error": f"Audio decode failed: {e}"}, status_code=400)
+
+    result = await tr.transcribe_chunk(
+        audio,
+        language=language or None,
+        task=task,
+        beam_size=settings.beam_size,
+        best_of=settings.best_of,
+        temperature=settings.temperature,
+    )
+    return {
+        "language": result.language,
+        "duration": result.duration,
+        "segments": [
+            {"text": s.text, "start": s.start, "end": s.end}
+            for s in result.segments
+        ],
+        "text": " ".join(s.text for s in result.segments),
     }
 
 
