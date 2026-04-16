@@ -11,7 +11,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - model-cache:/models
+      - ./models:/models
       - ./server:/app:ro
       - ./demo:/demo:ro
     environment:
@@ -30,6 +30,7 @@ services:
       - SESSION_TIMEOUT_SEC=${SESSION_TIMEOUT_SEC:-60}
       - SILENCE_TIMEOUT_SEC=${SILENCE_TIMEOUT_SEC:-5}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - HF_ENDPOINT=https://hf-mirror.com
     deploy:
       resources:
         limits:
@@ -56,7 +57,3 @@ services:
   #           - driver: nvidia
   #             count: 1
   #             capabilities: [gpu]
-
-volumes:
-  model-cache:
-    driver: local

@@ -18,6 +18,12 @@ COPY . .
 # Model cache mount point
 RUN mkdir -p /models
 
+# Download model during build so the image is self-contained
+ARG MODEL_SIZE=large-v3-turbo
+ARG HF_ENDPOINT=https://hf-mirror.com
+ENV HF_ENDPOINT=${HF_ENDPOINT}
+RUN python -c "from faster_whisper import WhisperModel; WhisperModel('${MODEL_SIZE}', device='cpu', compute_type='int8', download_root='/models')"
+
 EXPOSE 9090
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
