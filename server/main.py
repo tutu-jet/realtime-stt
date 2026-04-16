@@ -56,7 +56,7 @@ async def serve_demo():
     return JSONResponse({"error": "Demo file not found"}, status_code=404)
 
 
-@app.get("/health")
+@app.get("/v1/health")
 async def health():
     return {
         "status": "ok" if tr.is_ready() else "loading",
@@ -67,7 +67,7 @@ async def health():
     }
 
 
-@app.post("/transcribe")
+@app.post("/v1/transcribe")
 async def transcribe_upload(
     file: UploadFile = File(...),
     language: str = Form(None),
@@ -108,6 +108,6 @@ async def transcribe_upload(
     }
 
 
-@app.websocket("/asr")
+@app.websocket("/v1/asr")
 async def websocket_asr(websocket: WebSocket):
     await session_mgr.handle_session(websocket, settings)

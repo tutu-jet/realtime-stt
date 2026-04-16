@@ -306,7 +306,7 @@
     <div class="section-title">连接设置</div>
     <div class="row">
       <label>服务器地址</label>
-      <input type="text" id="server-url" value="ws://localhost:9090/asr" />
+      <input type="text" id="server-url" value="ws://localhost:9090/v1/asr" />
       <button class="btn btn-ghost btn-sm" id="btn-test">测试连接</button>
     </div>
     <div class="row" style="margin-top:12px;">
@@ -732,7 +732,7 @@ registerProcessor('pcm-processor',PCMProcessor);`;
 
     // ── Test connection ───────────────────────────────────────────────────────
     btnTest.addEventListener('click', async () => {
-      const healthUrl = serverUrl.value.trim().replace(/^ws/,'http').replace(/\/asr$/,'')+'/health';
+      const healthUrl = serverUrl.value.trim().replace(/^ws/,'http').replace(/\/v1\/asr$/,'')+'/v1/health';
       btnTest.disabled=true; btnTest.textContent='检测中…';
       try {
         const data = await fetch(healthUrl).then(r=>r.json());
@@ -836,7 +836,7 @@ registerProcessor('pcm-processor',PCMProcessor);`;
 
     btnHttpSend.addEventListener('click', async () => {
       if (!httpBlob) return;
-      const baseUrl = serverUrl.value.trim().replace(/^ws/,'http').replace(/\/asr$/, '');
+      const baseUrl = serverUrl.value.trim().replace(/^ws/,'http').replace(/\/v1\/asr$/, '');
       const form = new FormData();
       form.append('file', httpBlob, 'recording.webm');
       if (selLang.value) form.append('language', selLang.value);
@@ -847,7 +847,7 @@ registerProcessor('pcm-processor',PCMProcessor);`;
       httpSetStatus('正在上传并转录…');
       placeAnchor();
       try {
-        const res = await fetch(baseUrl + '/transcribe', { method: 'POST', body: form });
+        const res = await fetch(baseUrl + '/v1/transcribe', { method: 'POST', body: form });
         if (!res.ok) { const e = await res.json(); throw new Error(e.error||res.statusText); }
         const data = await res.json();
         if (data.text && data.text.trim()) {

@@ -27,7 +27,7 @@ RUN python -c "from faster_whisper import WhisperModel; WhisperModel('${MODEL_SI
 EXPOSE 9090
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
-    CMD curl -f http://localhost:9090/health || exit 1
+    CMD curl -f http://localhost:9090/v1/health || exit 1
 
 CMD ["python", "-m", "uvicorn", "main:app", \
      "--host", "0.0.0.0", \
