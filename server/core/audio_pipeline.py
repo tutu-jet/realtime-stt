@@ -67,6 +67,7 @@ class AudioPipeline:
 
     def start(self) -> None:
         """Start background worker tasks."""
+        self._silence_start_time = time.monotonic()  # start silence clock immediately
         self._worker_task = asyncio.create_task(self._transcription_worker(), name="transcription-worker")
         self._interim_task = asyncio.create_task(self._interim_sender(), name="interim-sender")
 
