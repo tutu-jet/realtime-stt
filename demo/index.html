@@ -3,888 +3,864 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>实时语音转文字</title>
+  <title>语音转文字</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg-base: #f2f2f7;
-      --surface-0: rgba(255,255,255,0.72);
-      --surface-1: rgba(255,255,255,0.88);
-      --surface-2: rgba(255,255,255,0.55);
-      --border-subtle: rgba(0,0,0,0.08);
-      --border-focus: rgba(0,122,255,0.45);
+      --bg: #f5f5f7;
+      --surface: rgba(255,255,255,0.82);
+      --surface-hover: rgba(255,255,255,0.95);
+      --border: rgba(0,0,0,0.07);
+      --border-focus: rgba(0,122,255,0.4);
       --accent: #007aff;
-      --accent-hover: #0066d6;
-      --accent-dim: rgba(0,122,255,0.1);
-      --accent-glow: rgba(0,122,255,0.22);
-      --success: #34c759;
-      --danger: #ff3b30;
-      --text-primary: #1c1c1e;
-      --text-secondary: #3c3c43;
-      --text-muted: #8e8e93;
-      --shadow-card: 0 2px 8px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.04);
-      --radius-sm: 8px;
-      --radius-md: 12px;
-      --radius-lg: 18px;
+      --accent-hover: #0062cc;
+      --accent-dim: rgba(0,122,255,0.08);
+      --accent-glow: rgba(0,122,255,0.18);
+      --success: #30d158;
+      --danger: #ff453a;
+      --warn: #ff9f0a;
+      --text-1: #1d1d1f;
+      --text-2: #48484a;
+      --text-3: #8e8e93;
+      --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06);
+      --r-sm: 10px;
+      --r-md: 14px;
+      --r-lg: 20px;
     }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
-      background: var(--bg-base);
-      color: var(--text-primary);
+      background: var(--bg);
+      color: var(--text-1);
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 40px 16px 56px;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 32px 16px 64px;
       -webkit-font-smoothing: antialiased;
     }
 
-    /* subtle noise texture on bg */
-    body::before {
-      content: '';
-      position: fixed; inset: 0; pointer-events: none; z-index: 0;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-    }
-
-    header {
-      position: relative; z-index: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 28px;
-      text-align: center;
-    }
-    .header-icon {
-      width: 52px; height: 52px;
-      background: linear-gradient(145deg, #e8f0fe, #dce8ff);
-      border: 1px solid rgba(0,122,255,0.15);
-      border-radius: 16px;
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 6px;
-      box-shadow: 0 2px 8px rgba(0,122,255,0.12), inset 0 1px 0 rgba(255,255,255,0.9);
-    }
-    header h1 {
-      font-size: 1.6rem; font-weight: 700;
-      letter-spacing: -0.03em;
-      color: var(--text-primary);
-    }
-    .subtitle { font-size: 0.78rem; color: var(--text-muted); letter-spacing: 0.01em; }
+    .container { width: 100%; max-width: 720px; }
 
     .card {
-      position: relative; z-index: 1;
-      background: var(--surface-1);
-      backdrop-filter: blur(20px) saturate(180%);
-      -webkit-backdrop-filter: blur(20px) saturate(180%);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
+      background: var(--surface);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid var(--border);
+      border-radius: var(--r-lg);
       padding: 20px 22px;
-      width: 100%; max-width: 760px;
-      margin-bottom: 12px;
-      box-shadow: var(--shadow-card);
+      margin-bottom: 10px;
+      box-shadow: var(--shadow);
     }
 
-    .section-title {
-      font-size: 0.68rem; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.1em;
-      color: var(--text-muted); margin-bottom: 14px;
+    /* ── Settings row (collapsible) ── */
+    .settings-toggle {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-3);
+      cursor: pointer; user-select: none; margin-bottom: 0;
     }
-
+    .settings-toggle .arrow { transition: transform 0.2s; font-size: 0.6rem; }
+    .settings-toggle.open .arrow { transform: rotate(90deg); }
+    .settings-body { display: none; margin-top: 14px; }
+    .settings-body.open { display: block; }
     .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-
-    label { font-size: 0.82rem; color: var(--text-secondary); margin-right: 2px; white-space: nowrap; font-weight: 500; }
-
+    .row + .row { margin-top: 10px; }
+    .row label { font-size: 0.8rem; color: var(--text-2); font-weight: 500; white-space: nowrap; }
     input[type="text"], select {
-      background: rgba(118,118,128,0.08);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-sm);
-      color: var(--text-primary);
-      padding: 8px 11px; font-size: 0.85rem;
-      outline: none; transition: border-color 0.18s, box-shadow 0.18s;
+      background: rgba(118,118,128,0.06);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      color: var(--text-1);
+      padding: 8px 11px; font-size: 0.84rem;
+      outline: none; transition: border-color 0.15s, box-shadow 0.15s;
       font-family: inherit;
     }
-    input[type="text"] { flex: 1; min-width: 200px; }
+    input[type="text"] { flex: 1; min-width: 180px; }
     input[type="text"]:focus, select:focus {
       border-color: var(--border-focus);
-      box-shadow: 0 0 0 3px rgba(0,122,255,0.12);
+      box-shadow: 0 0 0 3px rgba(0,122,255,0.1);
     }
-    select { cursor: pointer; appearance: none; padding-right: 28px;
+    select {
+      cursor: pointer; appearance: none; padding-right: 26px;
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238e8e93'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 10px center;
+      background-repeat: no-repeat; background-position: right 9px center;
     }
-    select option { background: #fff; color: #1c1c1e; }
 
+    /* ── Input source toggle ── */
+    .source-tabs {
+      display: flex; gap: 0;
+      background: rgba(118,118,128,0.08);
+      border-radius: var(--r-sm);
+      padding: 2px; margin-bottom: 16px;
+    }
+    .source-tab {
+      flex: 1; border: none; background: transparent;
+      padding: 8px 0; font-size: 0.82rem; font-weight: 600;
+      color: var(--text-3); cursor: pointer;
+      border-radius: calc(var(--r-sm) - 2px);
+      transition: all 0.2s; font-family: inherit;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .source-tab.active {
+      background: #fff; color: var(--text-1);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .source-tab svg { width: 14px; height: 14px; }
+
+    /* ── Buttons ── */
+    .btn {
+      border: none; border-radius: var(--r-md);
+      padding: 10px 20px; font-size: 0.86rem; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      transition: opacity 0.12s, transform 0.08s, box-shadow 0.12s;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+    .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 2px 8px var(--accent-glow); }
+    .btn-primary:not(:disabled):hover { background: var(--accent-hover); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-ghost {
+      background: rgba(118,118,128,0.08); color: var(--text-2);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:not(:disabled):hover { background: rgba(118,118,128,0.15); }
+    .btn-sm { padding: 7px 14px; font-size: 0.76rem; border-radius: var(--r-sm); }
+    .btn-lg { padding: 14px 32px; font-size: 0.92rem; border-radius: var(--r-md); }
+
+    /* ── Waveform / drop zone ── */
+    #waveform-canvas {
+      display: block; width: 100%; height: 64px;
+      border-radius: var(--r-md);
+      background: rgba(118,118,128,0.04);
+      border: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+
+    .drop-zone {
+      border: 2px dashed rgba(118,118,128,0.18);
+      border-radius: var(--r-md);
+      padding: 28px 20px;
+      text-align: center; cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 14px;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent); background: var(--accent-dim);
+    }
+    .drop-zone .drop-icon { font-size: 1.6rem; margin-bottom: 6px; color: var(--text-3); }
+    .drop-zone .drop-text { font-size: 0.82rem; color: var(--text-3); }
+    .drop-zone .drop-text strong { color: var(--accent); font-weight: 600; }
+
+    /* ── Status / controls ── */
+    .controls-row { display: flex; justify-content: space-between; align-items: center; }
+    .status-left { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; }
     .status-dot {
       width: 8px; height: 8px; border-radius: 50%;
       background: #c7c7cc; display: inline-block; flex-shrink: 0; transition: background 0.3s;
     }
     .status-dot.connected { background: var(--success); animation: pulse 1.8s infinite; }
     .status-dot.recording { background: var(--danger); animation: pulse 0.85s infinite; }
-    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
+    #status-text { color: var(--text-2); }
+    #timer { font-variant-numeric: tabular-nums; color: var(--text-3); font-size: 0.8rem; margin-left: 4px; }
+    .action-btns { display: flex; gap: 8px; }
 
-    #waveform-canvas {
-      display: block; width: 100%; height: 68px;
-      border-radius: var(--radius-md);
-      background: rgba(118,118,128,0.06);
-      border: 1px solid var(--border-subtle);
-      margin-bottom: 14px;
+    /* ── File info row ── */
+    .file-info {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 12px; flex-wrap: wrap;
+    }
+    .file-info .fname {
+      font-size: 0.82rem; color: var(--text-2); font-weight: 500;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px;
+    }
+    .file-info .fmeta { font-size: 0.74rem; color: var(--text-3); }
+    .file-info audio {
+      width: 100%; border-radius: var(--r-sm); margin-top: 8px;
     }
 
-    .btn {
-      border: none; border-radius: var(--radius-md);
-      padding: 10px 22px; font-size: 0.88rem; font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.15s, transform 0.1s, box-shadow 0.15s;
-      display: inline-flex; align-items: center; gap: 6px;
-      font-family: inherit; letter-spacing: -0.01em;
+    /* ── Progress ── */
+    .progress-bar {
+      height: 3px; background: rgba(118,118,128,0.1);
+      border-radius: 2px; overflow: hidden; margin: 10px 0 4px;
     }
-    .btn:active { transform: scale(0.96); }
-    .btn:disabled { opacity: 0.32; cursor: not-allowed; transform: none; }
-    .btn-primary {
-      background: var(--accent); color: #fff;
-      box-shadow: 0 2px 10px var(--accent-glow);
+    .progress-bar .fill {
+      height: 100%; width: 0%; border-radius: 2px;
+      background: var(--accent); transition: width 0.3s ease;
     }
-    .btn-primary:not(:disabled):hover { background: var(--accent-hover); box-shadow: 0 4px 16px var(--accent-glow); }
-    .btn-danger  { background: var(--danger); color: #fff; box-shadow: 0 2px 10px rgba(255,59,48,0.2); }
-    .btn-danger:not(:disabled):hover  { background: #e0352b; }
-    .btn-ghost   {
-      background: rgba(118,118,128,0.1); color: var(--text-secondary);
-      border: 1px solid var(--border-subtle);
-    }
-    .btn-ghost:not(:disabled):hover { background: rgba(118,118,128,0.18); color: var(--text-primary); }
-    .btn-sm      { padding: 7px 14px; font-size: 0.78rem; border-radius: var(--radius-sm); }
 
-    .status-row  { display: flex; justify-content: space-between; align-items: center; }
-    .status-left { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; }
-    #status-text { color: var(--text-secondary); }
-    #timer       { font-variant-numeric: tabular-nums; color: var(--text-muted); font-size: 0.82rem; }
-    .btn-row     { display: flex; justify-content: center; gap: 10px; }
-
-    /* ── Transcript editor ── */
+    /* ── Transcript ── */
     #transcript-box {
-      min-height: 200px;
-      max-height: 480px;
+      min-height: 160px; max-height: 420px;
       overflow-y: auto;
-      background: rgba(118,118,128,0.06);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-md);
-      padding: 18px 20px;
-      font-size: 1.02rem;
-      line-height: 1.9;
-      word-break: break-word;
-      outline: none;
-      white-space: pre-wrap;
-      cursor: text;
-      transition: border-color 0.18s, box-shadow 0.18s;
-      color: var(--text-primary);
-      font-family: inherit;
+      background: rgba(118,118,128,0.04);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 16px 18px;
+      font-size: 0.98rem; line-height: 1.85;
+      word-break: break-word; outline: none;
+      white-space: pre-wrap; cursor: text;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      color: var(--text-1); font-family: inherit;
     }
     #transcript-box:focus {
       border-color: var(--border-focus);
-      box-shadow: 0 0 0 3px rgba(0,122,255,0.1);
+      box-shadow: 0 0 0 3px rgba(0,122,255,0.08);
     }
-    #transcript-box::-webkit-scrollbar { width: 5px; }
-    #transcript-box::-webkit-scrollbar-track { background: transparent; }
-    #transcript-box::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
+    #transcript-box::-webkit-scrollbar { width: 4px; }
+    #transcript-box::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 2px; }
+    #transcript-box .interim { color: var(--text-3); font-style: italic; }
+    .placeholder { color: var(--text-3); pointer-events: none; user-select: none; }
 
-    #transcript-box .interim {
-      color: var(--text-muted);
-      font-style: italic;
+    .result-toolbar {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px;
     }
-
-    .placeholder { color: var(--text-muted); pointer-events: none; user-select: none; }
-
+    .result-toolbar .label {
+      font-size: 0.7rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--text-3);
+    }
     .info-row {
-      display: flex; gap: 16px;
-      font-size: 0.73rem; color: var(--text-muted);
-      margin-top: 10px; flex-wrap: wrap;
+      display: flex; gap: 14px; font-size: 0.72rem; color: var(--text-3);
+      margin-top: 8px;
     }
 
-    /* ── Mode tabs ── */
-    .mode-tabs {
-      position: relative; z-index: 1;
-      display: flex; gap: 4px;
-      background: rgba(118,118,128,0.12);
-      border-radius: 10px; padding: 3px;
-      width: 100%; max-width: 760px;
-      margin-bottom: 12px;
+    /* ── Reference text ── */
+    .ref-card {
+      margin-top: 12px;
+      background: rgba(48,209,88,0.06);
+      border: 1px solid rgba(48,209,88,0.18);
+      border-radius: var(--r-md);
+      padding: 14px 16px;
     }
-    .mode-tab {
-      flex: 1; border: none; background: transparent;
-      border-radius: 8px; padding: 8px 0;
-      font-size: 0.84rem; font-weight: 500; cursor: pointer;
-      color: var(--text-muted); transition: all 0.18s;
-      font-family: inherit;
+    .ref-card .ref-label {
+      font-size: 0.66rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--success); margin-bottom: 6px;
     }
-    .mode-tab.active {
-      background: rgba(255,255,255,0.9);
-      color: var(--text-primary);
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-      font-weight: 600;
-    }
-    .mode-panel { display: none; }
-    .mode-panel.active { display: contents; }
-
-    /* ── HTTP mode ── */
-    .http-rec-btn {
-      width: 64px; height: 64px; border-radius: 50%; border: none; cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.6rem; transition: transform 0.12s, box-shadow 0.15s;
-      flex-shrink: 0;
-    }
-    .http-rec-btn:active { transform: scale(0.93); }
-    .http-rec-btn.idle    { background: var(--accent); box-shadow: 0 4px 16px var(--accent-glow); }
-    .http-rec-btn.recording { background: var(--danger); box-shadow: 0 4px 16px rgba(255,59,48,0.3);
-                              animation: pulse 0.85s infinite; }
-    .http-rec-btn:disabled { opacity: 0.32; cursor: not-allowed; animation: none; }
-
-    .http-controls { display: flex; align-items: center; gap: 16px; }
-    .http-status   { font-size: 0.85rem; color: var(--text-secondary); }
-    .http-timer    { font-variant-numeric: tabular-nums; font-size: 0.82rem; color: var(--text-muted); }
-
-    .shortcuts-hint {
-      position: relative; z-index: 1;
-      font-size: 0.71rem; color: var(--text-muted);
-      text-align: center; letter-spacing: 0.01em;
-      margin-top: -2px; margin-bottom: 12px;
-    }
-    .shortcuts-hint kbd {
-      display: inline-block;
-      background: rgba(255,255,255,0.8);
-      border: 1px solid rgba(0,0,0,0.1);
-      border-bottom-width: 2px;
-      border-radius: 5px;
-      padding: 1px 6px; font-family: inherit; font-size: 0.67rem;
-      color: var(--text-secondary);
-      box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    .ref-card .ref-text {
+      font-size: 0.88rem; line-height: 1.7;
+      color: var(--text-2); white-space: pre-wrap;
     }
 
+    /* ── Shortcuts hint ── */
+    .shortcuts {
+      font-size: 0.68rem; color: var(--text-3);
+      text-align: center; margin-top: 2px; margin-bottom: 10px;
+    }
+    .shortcuts kbd {
+      display: inline-block; background: rgba(255,255,255,0.8);
+      border: 1px solid rgba(0,0,0,0.08); border-bottom-width: 2px;
+      border-radius: 5px; padding: 1px 5px;
+      font-family: inherit; font-size: 0.65rem; color: var(--text-2);
+    }
+
+    /* ── Mobile FAB ── */
     .mobile-fab {
       display: none; position: fixed; bottom: 0; left: 0; right: 0;
-      padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom));
-      background: linear-gradient(to top, rgba(242,242,247,0.96) 60%, transparent);
-      backdrop-filter: blur(8px);
-      gap: 10px; z-index: 100;
+      padding: 10px 16px; padding-bottom: calc(10px + env(safe-area-inset-bottom));
+      background: linear-gradient(to top, rgba(245,245,247,0.96) 60%, transparent);
+      backdrop-filter: blur(8px); gap: 8px; z-index: 100;
     }
     .mobile-fab button {
-      flex: 1; border: none; border-radius: var(--radius-md);
-      padding: 14px; font-size: 1rem; font-weight: 600; cursor: pointer;
-      font-family: inherit;
+      flex: 1; border: none; border-radius: var(--r-md);
+      padding: 14px; font-size: 1rem; font-weight: 600;
+      cursor: pointer; font-family: inherit;
     }
-    .mobile-fab button:disabled { opacity: 0.32; cursor: not-allowed; }
-    #btn-start-fab { background: var(--accent); color: #fff; box-shadow: 0 2px 10px var(--accent-glow); }
-    #btn-stop-fab  { background: var(--danger); color: #fff; }
+    .mobile-fab button:disabled { opacity: 0.3; cursor: not-allowed; }
+    #btn-start-fab { background: var(--accent); color: #fff; }
+    #btn-stop-fab { background: var(--danger); color: #fff; }
 
     @media (max-width: 599px) {
-      body { padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+      body { padding: 16px 10px calc(80px + env(safe-area-inset-bottom)); }
       .mobile-fab { display: flex; }
-      .btn-row { display: none; }
+      .action-btns { display: none; }
       input[type="text"], select { min-height: 44px; font-size: 1rem; }
-      .row { flex-direction: column; align-items: stretch; }
-      header h1 { font-size: 1.3rem; }
     }
   </style>
 </head>
 <body>
 
-  <header>
-    <div class="header-icon">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="9" y="2" width="6" height="12" rx="3"/>
-        <path d="M5 10a7 7 0 0 0 14 0"/>
-        <line x1="12" y1="19" x2="12" y2="22"/>
-        <line x1="8" y1="22" x2="16" y2="22"/>
-      </svg>
-    </div>
-    <h1>实时语音转文字</h1>
-    <p class="subtitle">Powered by faster-whisper</p>
-  </header>
+<div class="container">
 
+  <!-- Settings (collapsed by default) -->
   <div class="card">
-    <div class="section-title">连接设置</div>
-    <div class="row">
-      <label>服务器地址</label>
-      <input type="text" id="server-url" value="ws://localhost:9090/v1/asr" />
-      <button class="btn btn-ghost btn-sm" id="btn-test">测试连接</button>
+    <div class="settings-toggle" id="settings-toggle">
+      <span class="arrow">&#9654;</span> 连接设置
+      <span id="conn-badge" style="margin-left:auto;font-size:0.72rem;color:var(--text-3);text-transform:none;letter-spacing:0;font-weight:400;"></span>
     </div>
-    <div class="row" style="margin-top:12px;">
-      <label>语言</label>
-      <select id="sel-lang">
-        <option value="">自动检测</option>
-        <option value="zh">中文</option>
-        <option value="en">英语</option>
-        <option value="ja">日语</option>
-        <option value="ko">韩语</option>
-        <option value="fr">法语</option>
-        <option value="de">德语</option>
-        <option value="es">西班牙语</option>
-      </select>
-      <label>任务</label>
-      <select id="sel-task">
-        <option value="transcribe">转写</option>
-        <option value="translate">翻译为英文</option>
-      </select>
+    <div class="settings-body" id="settings-body">
+      <div class="row">
+        <label>服务器</label>
+        <input type="text" id="server-url" value="ws://localhost:9090/v1/asr" />
+        <button class="btn btn-ghost btn-sm" id="btn-test">测试</button>
+      </div>
+      <div class="row">
+        <label>语言</label>
+        <select id="sel-lang">
+          <option value="">自动检测</option>
+          <option value="zh">中文</option>
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="ko">한국어</option>
+          <option value="fr">Français</option>
+          <option value="de">Deutsch</option>
+          <option value="es">Español</option>
+          <option value="pt">Português</option>
+        </select>
+        <label>模式</label>
+        <select id="sel-task">
+          <option value="transcribe">转写</option>
+          <option value="translate">翻译为英文</option>
+        </select>
+      </div>
     </div>
   </div>
 
-  <!-- Mode tabs -->
-  <div class="mode-tabs">
-    <button class="mode-tab active" id="tab-ws">实时流式 (WebSocket)</button>
-    <button class="mode-tab" id="tab-http">录音上传 (HTTP)</button>
-  </div>
+  <!-- Input card -->
+  <div class="card">
+    <!-- Source tabs -->
+    <div class="source-tabs">
+      <button class="source-tab active" data-source="mic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="22"/></svg>
+        麦克风
+      </button>
+      <button class="source-tab" data-source="file">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        上传文件
+      </button>
+    </div>
 
-  <!-- WebSocket panel -->
-  <div class="mode-panel active" id="panel-ws">
-    <div class="card">
-      <canvas id="waveform-canvas" height="72"></canvas>
-      <div class="status-row">
+    <!-- Mic panel -->
+    <div id="panel-mic">
+      <canvas id="waveform-canvas" height="64"></canvas>
+      <div class="controls-row">
         <div class="status-left">
           <span class="status-dot" id="status-dot"></span>
-          <span id="status-text">未连接</span>
-          <span id="timer" style="margin-left:8px;">00:00</span>
+          <span id="status-text">就绪</span>
+          <span id="timer">00:00</span>
         </div>
-        <div class="btn-row">
-          <button class="btn btn-primary" id="btn-start">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="2" width="6" height="12" rx="3"/>
-              <path d="M5 10a7 7 0 0 0 14 0"/>
-              <line x1="12" y1="19" x2="12" y2="22"/>
-            </svg>
-            开始录音
-          </button>
+        <div class="action-btns">
+          <button class="btn btn-primary" id="btn-start">开始录音</button>
           <button class="btn btn-danger" id="btn-stop" disabled>停止</button>
         </div>
       </div>
     </div>
 
-    <div class="shortcuts-hint">
-      <kbd>Space</kbd> 开始/停止 &nbsp;·&nbsp; <kbd>Esc</kbd> 停止 &nbsp;·&nbsp; <kbd>C</kbd> 复制
-    </div>
-  </div>
-
-  <!-- HTTP panel -->
-  <div class="mode-panel" id="panel-http">
-    <div class="card">
-      <div class="http-controls">
-        <button class="http-rec-btn idle" id="btn-http-rec" title="点击开始录音">🎤</button>
-        <div>
-          <div class="http-status" id="http-status">点击麦克风开始录音</div>
-          <div class="http-timer" id="http-timer">00:00</div>
+    <!-- File panel -->
+    <div id="panel-file" style="display:none;">
+      <div class="drop-zone" id="drop-zone">
+        <div class="drop-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         </div>
-        <button class="btn btn-primary btn-sm" id="btn-http-send" disabled style="margin-left:auto;">
-          发送转录
-        </button>
+        <div class="drop-text">拖拽音频文件到此处，或 <strong>点击选择</strong></div>
+        <input type="file" id="file-input" accept="audio/*" style="display:none;" />
       </div>
-      <audio id="http-audio" controls style="display:none;width:100%;margin-top:14px;border-radius:8px;"></audio>
+
+      <!-- File info (hidden until file selected) -->
+      <div id="file-info-area" style="display:none;">
+        <div class="file-info">
+          <span class="fname" id="file-name"></span>
+          <span class="fmeta" id="file-meta"></span>
+        </div>
+        <audio id="file-audio" controls style="width:100%;border-radius:var(--r-sm);"></audio>
+
+        <!-- Transcription method -->
+        <div style="display:flex;gap:8px;margin-top:14px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm" id="btn-stream">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10"/></svg>
+            流式转录
+          </button>
+          <button class="btn btn-ghost btn-sm" id="btn-upload">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            整体上传
+          </button>
+          <span id="file-status" style="font-size:0.78rem;color:var(--text-3);margin-left:auto;"></span>
+        </div>
+        <div class="progress-bar" id="stream-progress" style="display:none;">
+          <div class="fill" id="stream-progress-fill"></div>
+        </div>
+      </div>
+
+      <!-- Ref text for file -->
+      <div id="ref-card" class="ref-card" style="display:none;">
+        <div class="ref-label">参考原文</div>
+        <div class="ref-text" id="ref-text"></div>
+      </div>
     </div>
   </div>
 
+  <!-- Shortcuts -->
+  <div class="shortcuts">
+    <kbd>Space</kbd> 开始/停止 &nbsp; <kbd>Esc</kbd> 停止 &nbsp; <kbd>C</kbd> 复制
+  </div>
+
+  <!-- Results -->
   <div class="card">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <div class="section-title" style="margin-bottom:0;">转写结果</div>
-      <div class="row" style="gap:8px;">
+    <div class="result-toolbar">
+      <span class="label">转写结果</span>
+      <div style="display:flex;gap:6px;">
         <button class="btn btn-ghost btn-sm" id="btn-copy">复制</button>
         <button class="btn btn-ghost btn-sm" id="btn-clear">清空</button>
       </div>
     </div>
-    <div id="transcript-box" contenteditable="true" spellcheck="false">
-      <span class="placeholder">点击"开始录音"后，转写内容将在此实时显示，也可直接在此编辑…</span>
-    </div>
+    <div id="transcript-box" contenteditable="true" spellcheck="false"><span class="placeholder">转写内容将在此实时显示，也可直接编辑…</span></div>
     <div class="info-row">
-      <span id="info-segs">段落数: 0</span>
-      <span id="info-dur">音频时长: 0s</span>
+      <span id="info-segs">段落: 0</span>
+      <span id="info-dur">耗时: —</span>
     </div>
   </div>
 
-  <div class="mobile-fab">
-    <button id="btn-start-fab">🎤 开始录音</button>
-    <button id="btn-stop-fab" disabled>停止</button>
-  </div>
+</div>
 
-  <script>
-  (() => {
-    // ── State ────────────────────────────────────────────────────────────────
-    let ws = null;
-    let audioCtx = null, workletNode = null, mediaStream = null;
-    let analyserNode = null, meterRaf = null;
-    let timerInterval = null, startTime = 0;
-    let uid = '', handshakeDone = false;
-    let segCount = 0;
+<div class="mobile-fab">
+  <button id="btn-start-fab">开始录音</button>
+  <button id="btn-stop-fab" disabled>停止</button>
+</div>
 
-    // Insertion anchor: a zero-width bookmark node placed at recording start position
-    // All STT text is inserted relative to this anchor.
-    let anchor = null;       // Text node or element just before insertion point
-    let interimSpan = null;  // The live <span class="interim"> element
+<script>
+(() => {
+  // ── State ──
+  let ws = null;
+  let audioCtx = null, workletNode = null, mediaStream = null;
+  let analyserNode = null, meterRaf = null;
+  let timerInterval = null, startTime = 0;
+  let uid = '', handshakeDone = false;
+  let segCount = 0;
+  let simCancelled = false;
+  let currentSource = 'mic'; // 'mic' | 'file'
+  let durInterval = null, durStart = 0; // transcription elapsed timer
 
-    // ── DOM ──────────────────────────────────────────────────────────────────
-    const btnStart      = document.getElementById('btn-start');
-    const btnStop       = document.getElementById('btn-stop');
-    const btnTest       = document.getElementById('btn-test');
-    const btnCopy       = document.getElementById('btn-copy');
-    const btnClear      = document.getElementById('btn-clear');
-    const statusDot     = document.getElementById('status-dot');
-    const statusText    = document.getElementById('status-text');
-    const timerEl       = document.getElementById('timer');
-    const box           = document.getElementById('transcript-box');
-    const infoSegs      = document.getElementById('info-segs');
-    const selLang       = document.getElementById('sel-lang');
-    const selTask       = document.getElementById('sel-task');
-    const serverUrl     = document.getElementById('server-url');
-    const canvas        = document.getElementById('waveform-canvas');
-    const ctx2d         = canvas.getContext('2d');
+  let anchor = null;
+  let interimSpan = null;
+  let savedRange = null;
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
-    function uuidv4() {
-      return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
-    }
-    function setStatus(label, mode) {
-      statusText.textContent = label;
-      statusDot.className = 'status-dot' + (mode ? ' '+mode : '');
-    }
-    function formatTime(ms) {
-      const s = Math.floor(ms/1000), m = Math.floor(s/60);
-      return String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
-    }
+  // ── DOM ──
+  const $ = id => document.getElementById(id);
+  const btnStart    = $('btn-start');
+  const btnStop     = $('btn-stop');
+  const btnTest     = $('btn-test');
+  const btnCopy     = $('btn-copy');
+  const btnClear    = $('btn-clear');
+  const btnStream   = $('btn-stream');
+  const btnUpload   = $('btn-upload');
+  const statusDot   = $('status-dot');
+  const statusText  = $('status-text');
+  const timerEl     = $('timer');
+  const box         = $('transcript-box');
+  const infoSegs    = $('info-segs');
+  const infoDur     = $('info-dur');
+  const selLang     = $('sel-lang');
+  const selTask     = $('sel-task');
+  const serverUrl   = $('server-url');
+  const canvas      = $('waveform-canvas');
+  const ctx2d       = canvas.getContext('2d');
+  const panelMic    = $('panel-mic');
+  const panelFile   = $('panel-file');
+  const dropZone    = $('drop-zone');
+  const fileInput   = $('file-input');
+  const fileInfoArea= $('file-info-area');
+  const fileNameEl  = $('file-name');
+  const fileMetaEl  = $('file-meta');
+  const fileAudio   = $('file-audio');
+  const fileStatus  = $('file-status');
+  const streamProgress     = $('stream-progress');
+  const streamProgressFill = $('stream-progress-fill');
+  const refCard     = $('ref-card');
+  const refText     = $('ref-text');
+  const connBadge   = $('conn-badge');
 
-    let savedRange = null;  // caret position saved before button click
+  // ── Reference texts ──
+  const REF_TEXTS = {
+    'en_01.mp3': 'Artificial intelligence is changing the way we interact with technology every day. From voice assistants to self-driving cars, the possibilities seem endless.',
+    'en_02.mp3': 'The weather forecast for today shows clear skies with temperatures around twenty-five degrees. It will be a perfect day to go outside and enjoy the sunshine.',
+    'zh_01.mp3': '人工智能正在深刻改变我们的日常生活。从智能手机到自动驾驶汽车，科技让一切变得更加便捷。',
+    'zh_02.mp3': '语音识别技术已经取得了巨大的进步。现在我们可以用语音来控制各种设备，非常方便。',
+    'de_01.mp3': 'Die künstliche Intelligenz verändert unsere Welt grundlegend. Besonders im Bereich der Spracherkennung gibt es große Fortschritte.',
+    'de_02.mp3': 'Das Wetter heute ist wunderschön mit klarem Himmel. Die Temperatur liegt bei etwa fünfundzwanzig Grad.',
+    'ja_01.mp3': '音声認識の技術は日々進化しています。リアルタイムで翻訳ができるようになりました。',
+    'ja_02.mp3': '今日の天気はとても良いです。外に出かけるには最高の日ですね。',
+    'zh_en_mix.mp3': '人工智能正在深刻改变我们的日常生活。Artificial intelligence is changing the way we interact with technology every day. 语音识别技术已经取得了巨大的进步。',
+    'zh_de_mix.mp3': '人工智能正在深刻改变我们的日常生活。Die künstliche Intelligenz verändert unsere Welt grundlegend. 语音识别技术已经取得了巨大的进步。',
+    'de_en_mix.mp3': 'Die künstliche Intelligenz verändert unsere Welt grundlegend. Artificial intelligence is changing the way we interact with technology every day. Besonders im Bereich der Spracherkennung gibt es große Fortschritte. Speech recognition technology has become incredibly accurate in recent years. Das ist wirklich beeindruckend, oder?',
+    'ja_en_mix.mp3': '音声認識の技術は日々進化しています。The technology behind voice recognition is evolving rapidly. リアルタイムで翻訳ができるようになりました。Real-time translation has become a reality thanks to deep learning. これからの未来がとても楽しみですね。',
+    'pt_en_mix.mp3': 'A inteligência artificial está mudando o mundo de maneiras surpreendentes. Machine learning models can now understand and generate human language. O reconhecimento de voz é uma das aplicações mais importantes dessa tecnologia. Voice assistants have become part of our daily lives. O futuro da tecnologia é muito promissor.',
+    'es_en_mix.mp3': 'La tecnología de reconocimiento de voz ha avanzado mucho en los últimos años. Today we can talk to our devices and they understand us perfectly. Los modelos de aprendizaje profundo pueden procesar múltiples idiomas al mismo tiempo. This makes multilingual communication easier than ever before. Es un momento muy emocionante para la inteligencia artificial.',
+  };
 
-    // ── Placeholder handling ──────────────────────────────────────────────────
-    function clearPlaceholder() {
-      const ph = box.querySelector('.placeholder');
-      if (ph) ph.remove();
-    }
-    function showPlaceholder() {
-      if (box.textContent.trim() === '') {
-        box.innerHTML = '<span class="placeholder">点击"开始录音"后，转写内容将在此实时显示，也可直接在此编辑…</span>';
-      }
-    }
-    box.addEventListener('focus', clearPlaceholder);
-    box.addEventListener('blur', () => {
-      showPlaceholder();
+  // ── Helpers ──
+  function uuidv4() {
+    return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+  }
+  function setStatus(label, mode) {
+    statusText.textContent = label;
+    statusDot.className = 'status-dot' + (mode ? ' '+mode : '');
+  }
+  function fmtTime(ms) {
+    const s = Math.floor(ms/1000), m = Math.floor(s/60);
+    return String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+  }
+  function setLocked(locked) {
+    btnStart.disabled = locked;
+    btnStream.disabled = locked;
+    btnUpload.disabled = locked;
+    btnStop.disabled = !locked;
+  }
+  function startDurTimer() {
+    stopDurTimer();
+    durStart = Date.now();
+    infoDur.textContent = '耗时: 0.0s';
+    durInterval = setInterval(() => {
+      const elapsed = ((Date.now() - durStart) / 1000).toFixed(1);
+      infoDur.textContent = `耗时: ${elapsed}s`;
+    }, 100);
+  }
+  function stopDurTimer(final) {
+    if (durInterval) { clearInterval(durInterval); durInterval = null; }
+    if (final !== undefined) infoDur.textContent = `耗时: ${final}s`;
+    else if (durStart) { infoDur.textContent = `耗时: ${((Date.now()-durStart)/1000).toFixed(1)}s`; }
+  }
+
+  // ── Settings toggle ──
+  const settingsToggle = $('settings-toggle');
+  const settingsBody = $('settings-body');
+  settingsToggle.addEventListener('click', () => {
+    settingsToggle.classList.toggle('open');
+    settingsBody.classList.toggle('open');
+  });
+
+  // ── Source tabs ──
+  document.querySelectorAll('.source-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.source-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentSource = tab.dataset.source;
+      panelMic.style.display  = currentSource === 'mic'  ? '' : 'none';
+      panelFile.style.display = currentSource === 'file' ? '' : 'none';
     });
-    box.addEventListener('keyup', () => {
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) savedRange = sel.getRangeAt(0).cloneRange();
-    });
-    box.addEventListener('mouseup', () => {
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) savedRange = sel.getRangeAt(0).cloneRange();
-    });
+  });
 
-    // ── Anchor: bookmark where to insert STT text ─────────────────────────────
-    function placeAnchor() {
-      clearPlaceholder();
-      removeInterim();
-      if (anchor && anchor.parentNode) anchor.parentNode.removeChild(anchor);
+  // ── Placeholder ──
+  function clearPlaceholder() { const ph = box.querySelector('.placeholder'); if (ph) ph.remove(); }
+  function showPlaceholder() {
+    if (box.textContent.trim() === '')
+      box.innerHTML = '<span class="placeholder">转写内容将在此实时显示，也可直接编辑…</span>';
+  }
+  box.addEventListener('focus', clearPlaceholder);
+  box.addEventListener('blur', showPlaceholder);
+  box.addEventListener('keyup', () => { const s=window.getSelection(); if(s&&s.rangeCount)savedRange=s.getRangeAt(0).cloneRange(); });
+  box.addEventListener('mouseup', () => { const s=window.getSelection(); if(s&&s.rangeCount)savedRange=s.getRangeAt(0).cloneRange(); });
 
-      anchor = document.createElement('span');
-      anchor.setAttribute('data-stt-anchor', '1');
-      anchor.style.cssText = 'display:inline;font-size:0;line-height:0;';
+  // ── Anchor system ──
+  function placeAnchor() {
+    clearPlaceholder(); removeInterim();
+    if (anchor && anchor.parentNode) anchor.parentNode.removeChild(anchor);
+    anchor = document.createElement('span');
+    anchor.setAttribute('data-stt-anchor','1');
+    anchor.style.cssText = 'display:inline;font-size:0;line-height:0;';
+    if (savedRange && box.contains(savedRange.startContainer)) {
+      try { const r=savedRange.cloneRange(); r.collapse(true); r.insertNode(anchor); } catch { box.appendChild(anchor); }
+    } else { box.appendChild(anchor); }
+  }
+  function setInterim(text) {
+    if (!anchor) return;
+    const t = text.length > 60 ? text.slice(0,60)+'…' : text;
+    if (!interimSpan) { interimSpan=document.createElement('span'); interimSpan.className='interim'; anchor.insertAdjacentElement('afterend',interimSpan); }
+    interimSpan.textContent = t;
+  }
+  function removeInterim() { if(interimSpan&&interimSpan.parentNode)interimSpan.parentNode.removeChild(interimSpan); interimSpan=null; }
+  function commitFinal(text) {
+    if (!anchor) return;
+    removeInterim();
+    const tn = document.createTextNode(text + ' ');
+    anchor.after(tn); tn.after(anchor);
+    segCount++; infoSegs.textContent = `段落: ${segCount}`;
+    anchor.scrollIntoView({ block: 'nearest' });
+  }
 
-      if (savedRange && box.contains(savedRange.startContainer)) {
-        try {
-          const range = savedRange.cloneRange();
-          range.collapse(true);
-          range.insertNode(anchor);
-        } catch(e) {
-          box.appendChild(anchor);
-        }
-      } else {
-        box.appendChild(anchor);
-      }
-    }
+  // ── Canvas ──
+  let idleRaf=null, idlePhase=0;
+  function resizeCanvas() { canvas.width=canvas.offsetWidth*devicePixelRatio; canvas.height=canvas.offsetHeight*devicePixelRatio; }
+  function drawWaveform(arr) {
+    resizeCanvas(); const W=canvas.width,H=canvas.height; ctx2d.clearRect(0,0,W,H);
+    const g=ctx2d.createLinearGradient(0,0,W,0);
+    g.addColorStop(0,'rgba(0,122,255,0.6)'); g.addColorStop(0.5,'rgba(0,176,255,0.85)'); g.addColorStop(1,'rgba(0,122,255,0.6)');
+    ctx2d.beginPath(); const sw=W/arr.length; let x=0;
+    for(let i=0;i<arr.length;i++){const y=(arr[i]/128)*H/2; i===0?ctx2d.moveTo(x,y):ctx2d.lineTo(x,y); x+=sw;}
+    ctx2d.strokeStyle=g; ctx2d.lineWidth=2*devicePixelRatio; ctx2d.lineJoin='round'; ctx2d.stroke();
+  }
+  function drawIdle() {
+    resizeCanvas(); const W=canvas.width,H=canvas.height; ctx2d.clearRect(0,0,W,H);
+    const amp=H*0.06, pts=128;
+    const g=ctx2d.createLinearGradient(0,0,W,0);
+    g.addColorStop(0,'rgba(0,122,255,0.15)'); g.addColorStop(0.5,'rgba(0,176,255,0.25)'); g.addColorStop(1,'rgba(0,122,255,0.15)');
+    ctx2d.beginPath();
+    for(let i=0;i<=pts;i++){const x=(i/pts)*W,y=H/2+Math.sin(i/pts*Math.PI*4+idlePhase)*amp; i===0?ctx2d.moveTo(x,y):ctx2d.lineTo(x,y);}
+    ctx2d.strokeStyle=g; ctx2d.lineWidth=1.5*devicePixelRatio; ctx2d.lineJoin='round'; ctx2d.stroke();
+    idlePhase+=0.025;
+  }
+  function startIdle(){ if(idleRaf)cancelAnimationFrame(idleRaf); const l=()=>{drawIdle();idleRaf=requestAnimationFrame(l);}; l(); }
+  function stopIdle(){ if(idleRaf){cancelAnimationFrame(idleRaf);idleRaf=null;} }
+  function startMeter(){
+    stopIdle();
+    const buf=new Uint8Array(analyserNode.frequencyBinCount);
+    const l=()=>{analyserNode.getByteTimeDomainData(buf);drawWaveform(buf);meterRaf=requestAnimationFrame(l);}; l();
+  }
+  function stopMeter(){ if(meterRaf)cancelAnimationFrame(meterRaf); meterRaf=null; startIdle(); }
 
-    // ── Insert / update interim span ──────────────────────────────────────────
-    function setInterim(text) {
-      if (!anchor) return;
-      const truncated = text.length > 50 ? text.slice(0, 50) + '…' : text;
-      if (!interimSpan) {
-        interimSpan = document.createElement('span');
-        interimSpan.className = 'interim';
-        // Insert immediately after anchor
-        anchor.insertAdjacentElement('afterend', interimSpan);
-      }
-      interimSpan.textContent = truncated;
-    }
-
-    function removeInterim() {
-      if (interimSpan && interimSpan.parentNode) {
-        interimSpan.parentNode.removeChild(interimSpan);
-      }
-      interimSpan = null;
-    }
-
-    // ── Commit final text at anchor position ──────────────────────────────────
-    function commitFinal(text) {
-      if (!anchor) return;
-      removeInterim();
-      // Insert text node after anchor
-      const textNode = document.createTextNode(text + ' ');
-      anchor.after(textNode);
-      // Move anchor to after the new text, so next segment appends after this one
-      textNode.after(anchor);
-      segCount++;
-      infoSegs.textContent = `段落数: ${segCount}`;
-      scrollToAnchor();
-    }
-
-    function scrollToAnchor() {
-      if (anchor) anchor.scrollIntoView({ block: 'nearest' });
-    }
-
-    // ── Canvas waveform ───────────────────────────────────────────────────────
-    let idleRaf = null, idlePhase = 0;
-
-    function resizeCanvas() {
-      canvas.width = canvas.offsetWidth * devicePixelRatio;
-      canvas.height = canvas.offsetHeight * devicePixelRatio;
-    }
-    function drawWaveform(dataArray) {
-      resizeCanvas();
-      const W = canvas.width, H = canvas.height;
-      ctx2d.clearRect(0,0,W,H);
-      const grad = ctx2d.createLinearGradient(0,0,W,0);
-      grad.addColorStop(0,'rgba(0,122,255,0.7)');
-      grad.addColorStop(0.5,'rgba(0,176,255,0.9)');
-      grad.addColorStop(1,'rgba(0,122,255,0.7)');
-      ctx2d.beginPath();
-      const sliceW = W/dataArray.length;
-      let x = 0;
-      for (let i=0;i<dataArray.length;i++) {
-        const y = (dataArray[i]/128)*H/2;
-        i===0 ? ctx2d.moveTo(x,y) : ctx2d.lineTo(x,y);
-        x += sliceW;
-      }
-      ctx2d.strokeStyle = grad;
-      ctx2d.lineWidth = 2*devicePixelRatio;
-      ctx2d.lineJoin = 'round';
-      ctx2d.stroke();
-    }
-    function drawIdleFrame() {
-      resizeCanvas();
-      const W=canvas.width, H=canvas.height;
-      ctx2d.clearRect(0,0,W,H);
-      const amp = H*0.06, pts = 128;
-      const grad = ctx2d.createLinearGradient(0,0,W,0);
-      grad.addColorStop(0,'rgba(0,122,255,0.2)');
-      grad.addColorStop(0.5,'rgba(0,176,255,0.3)');
-      grad.addColorStop(1,'rgba(0,122,255,0.2)');
-      ctx2d.beginPath();
-      for (let i=0;i<=pts;i++) {
-        const x=(i/pts)*W, y=H/2+Math.sin(i/pts*Math.PI*4+idlePhase)*amp;
-        i===0 ? ctx2d.moveTo(x,y) : ctx2d.lineTo(x,y);
-      }
-      ctx2d.strokeStyle=grad; ctx2d.lineWidth=1.5*devicePixelRatio;
-      ctx2d.lineJoin='round'; ctx2d.stroke();
-      idlePhase+=0.025;
-    }
-    function startIdleAnimation() {
-      if (idleRaf) cancelAnimationFrame(idleRaf);
-      const loop = () => { drawIdleFrame(); idleRaf = requestAnimationFrame(loop); };
-      loop();
-    }
-    function stopIdleAnimation() { if (idleRaf) { cancelAnimationFrame(idleRaf); idleRaf=null; } }
-
-    function startMeter() {
-      stopIdleAnimation();
-      const buf = new Uint8Array(analyserNode.frequencyBinCount);
-      const loop = () => { analyserNode.getByteTimeDomainData(buf); drawWaveform(buf); meterRaf=requestAnimationFrame(loop); };
-      loop();
-    }
-    function stopMeter() { if (meterRaf) cancelAnimationFrame(meterRaf); startIdleAnimation(); }
-
-    // ── AudioWorklet ──────────────────────────────────────────────────────────
-    const WORKLET_CODE = `
+  // ── AudioWorklet ──
+  const WORKLET_CODE = `
 class PCMProcessor extends AudioWorkletProcessor {
-  constructor() { super(); this._buf=[]; this._target=1600; }
-  process(inputs) {
-    const ch = inputs[0]&&inputs[0][0]; if (!ch) return true;
-    for (let i=0;i<ch.length;i++) this._buf.push(ch[i]);
-    while (this._buf.length>=this._target) {
-      const chunk=new Float32Array(this._buf.splice(0,this._target));
-      this.port.postMessage(chunk.buffer,[chunk.buffer]);
+  constructor(){super();this._buf=[];this._target=1600;}
+  process(inputs){
+    const ch=inputs[0]&&inputs[0][0];if(!ch)return true;
+    for(let i=0;i<ch.length;i++)this._buf.push(ch[i]);
+    while(this._buf.length>=this._target){
+      const c=new Float32Array(this._buf.splice(0,this._target));
+      this.port.postMessage(c.buffer,[c.buffer]);
     }
     return true;
   }
 }
 registerProcessor('pcm-processor',PCMProcessor);`;
 
-    async function setupAudio() {
-      mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: { sampleRate:16000, channelCount:1, echoCancellation:true, noiseSuppression:true, autoGainControl:true }
-      });
-      audioCtx = new AudioContext({ sampleRate:16000 });
-      const blob = new Blob([WORKLET_CODE],{type:'application/javascript'});
-      const blobURL = URL.createObjectURL(blob);
-      await audioCtx.audioWorklet.addModule(blobURL);
-      URL.revokeObjectURL(blobURL);
-      const source = audioCtx.createMediaStreamSource(mediaStream);
-      analyserNode = audioCtx.createAnalyser(); analyserNode.fftSize=256;
-      source.connect(analyserNode);
-      workletNode = new AudioWorkletNode(audioCtx,'pcm-processor');
-      workletNode.port.onmessage = (e) => {
-        if (ws && ws.readyState===WebSocket.OPEN && handshakeDone) ws.send(e.data);
-      };
-      source.connect(workletNode);
-    }
-
-    // ── WebSocket ─────────────────────────────────────────────────────────────
-    function connectWS(url) {
-      ws = new WebSocket(url);
-      ws.binaryType = 'arraybuffer';
-      ws.onopen = () => {
-        setStatus('已连接，等待就绪','connected');
-        uid = uuidv4();
-        ws.send(JSON.stringify({ uid, language: selLang.value||null, task: selTask.value }));
-      };
-      ws.onmessage = (e) => {
-        if (typeof e.data!=='string') return;
-        let msg; try { msg=JSON.parse(e.data); } catch { return; }
-        handleMsg(msg);
-      };
-      ws.onerror = () => setStatus('连接错误','');
-      ws.onclose = () => { setStatus('已断开',''); handshakeDone=false; };
-    }
-
-    function handleMsg(msg) {
-      if (msg.type==='config') {
-        handshakeDone=true;
-        setStatus('录音中…','recording');
-        startTime=Date.now();
-        timerInterval=setInterval(()=>{ timerEl.textContent=formatTime(Date.now()-startTime); },500);
-        startMeter();
-        return;
-      }
-      if (msg.type==='error') {
-        const labels = {
-          SESSION_TIMEOUT:'会话超时', SILENCE_TIMEOUT:'静音超时',
-          MAX_CLIENTS_REACHED:'服务器已满', MODEL_NOT_READY:'模型加载中'
-        };
-        setStatus('错误: '+(labels[msg.code]||msg.message),'');
-        stopRecordingNoSend();
-        return;
-      }
-      if (msg.type==='ready_to_stop') {
-        setStatus('处理完成','connected');
-        removeInterim();
-        // final lines come in ready_to_stop — already committed via is_final, skip duplicates
-        return;
-      }
-      // transcription
-      if (msg.is_final) {
-        removeInterim();
-        if (msg.lines) {
-          for (const seg of msg.lines) {
-            if (seg.text && seg.text.trim()) commitFinal(seg.text.trim());
-          }
-        }
-      } else {
-        const buf = msg.buffer_transcription || '';
-        if (buf) setInterim(buf);
-      }
-    }
-
-    // ── Start / Stop ──────────────────────────────────────────────────────────
-    btnStart.addEventListener('click', async () => {
-      btnStart.disabled=true; btnStop.disabled=false;
-      segCount=0; infoSegs.textContent='段落数: 0';
-      handshakeDone=false;
-
-      // Place anchor at current caret (or end of box)
-      placeAnchor();
-
-      try {
-        await setupAudio();
-        setStatus('正在连接…','');
-        connectWS(serverUrl.value.trim());
-      } catch(err) {
-        setStatus('错误: '+err.message,'');
-        btnStart.disabled=false; btnStop.disabled=true;
-      }
+  async function setupAudio() {
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      audio:{sampleRate:16000,channelCount:1,echoCancellation:true,noiseSuppression:true,autoGainControl:true}
     });
+    audioCtx = new AudioContext({sampleRate:16000});
+    const blob=new Blob([WORKLET_CODE],{type:'application/javascript'});
+    const url=URL.createObjectURL(blob);
+    await audioCtx.audioWorklet.addModule(url);
+    URL.revokeObjectURL(url);
+    const src=audioCtx.createMediaStreamSource(mediaStream);
+    analyserNode=audioCtx.createAnalyser(); analyserNode.fftSize=256;
+    src.connect(analyserNode);
+    workletNode=new AudioWorkletNode(audioCtx,'pcm-processor');
+    workletNode.port.onmessage=(e)=>{if(ws&&ws.readyState===WebSocket.OPEN&&handshakeDone)ws.send(e.data);};
+    src.connect(workletNode);
+  }
 
-    btnStop.addEventListener('click', stopRecording);
+  // ── WS connect + message handler ──
+  function connectWS(url) {
+    ws = new WebSocket(url);
+    ws.binaryType = 'arraybuffer';
+    ws.onopen = () => { setStatus('已连接','connected'); uid=uuidv4(); ws.send(JSON.stringify({uid,language:selLang.value||null,task:selTask.value})); };
+    ws.onmessage = (e) => { if(typeof e.data!=='string')return; let m; try{m=JSON.parse(e.data);}catch{return;} handleMsg(m); };
+    ws.onerror = () => setStatus('连接错误','');
+    ws.onclose = () => { setStatus('已断开',''); handshakeDone=false; };
+  }
 
-    function stopRecording() {
-      if (ws && ws.readyState===WebSocket.OPEN) {
-        ws.send('END_OF_AUDIO');
-        setTimeout(()=>ws&&ws.close(), 3000);
-      }
-      _cleanupAudio();
+  function handleMsg(msg) {
+    if (msg.type==='config') {
+      handshakeDone=true; setStatus('录音中…','recording');
+      startTime=Date.now(); timerInterval=setInterval(()=>{timerEl.textContent=fmtTime(Date.now()-startTime);},500);
+      if (currentSource==='mic') startMeter();
+      return;
     }
-    function stopRecordingNoSend() {
-      if (ws) ws.close();
-      _cleanupAudio();
+    if (msg.type==='error') {
+      const labels={SESSION_TIMEOUT:'会话超时',SILENCE_TIMEOUT:'静音超时',MAX_CLIENTS_REACHED:'服务器已满',MODEL_NOT_READY:'模型加载中'};
+      setStatus('错误: '+(labels[msg.code]||msg.message),'');
+      stopRecordingNoSend(); return;
     }
-    function _cleanupAudio() {
-      if (mediaStream) { mediaStream.getTracks().forEach(t=>t.stop()); mediaStream=null; }
-      if (workletNode) { workletNode.disconnect(); workletNode=null; }
-      if (audioCtx) { audioCtx.close(); audioCtx=null; }
-      if (timerInterval) { clearInterval(timerInterval); timerInterval=null; }
-      // Don't remove anchor here — ready_to_stop may still arrive after cleanup
-      stopMeter();
-      setStatus('已停止','');
-      btnStart.disabled=false; btnStop.disabled=true;
-    }
-
-    // ── Test connection ───────────────────────────────────────────────────────
-    btnTest.addEventListener('click', async () => {
-      const healthUrl = serverUrl.value.trim().replace(/^ws/,'http').replace(/\/v1\/asr$/,'')+'/v1/health';
-      btnTest.disabled=true; btnTest.textContent='检测中…';
-      try {
-        const data = await fetch(healthUrl).then(r=>r.json());
-        btnTest.textContent = data.status==='ok' ? `✓ 正常 (${data.model})` : `⚠ ${data.status}`;
-      } catch { btnTest.textContent='✗ 无法连接'; }
-      setTimeout(()=>{ btnTest.textContent='测试连接'; btnTest.disabled=false; },3000);
-    });
-
-    // ── Copy / Clear ──────────────────────────────────────────────────────────
-    btnCopy.addEventListener('click', () => {
-      const text = box.innerText.replace(/\u200B/g,'').trim();
-      navigator.clipboard.writeText(text).then(()=>{
-        btnCopy.textContent='已复制!';
-        setTimeout(()=>btnCopy.textContent='复制',1500);
-      });
-    });
-    btnClear.addEventListener('click', () => {
+    if (msg.type==='ready_to_stop') { setStatus('完成','connected'); removeInterim(); return; }
+    if (msg.is_final) {
       removeInterim();
-      if (anchor && anchor.parentNode) anchor.parentNode.removeChild(anchor);
-      anchor=null;
-      box.innerHTML='<span class="placeholder">点击"开始录音"后，转写内容将在此实时显示，也可直接在此编辑…</span>';
-      segCount=0; infoSegs.textContent='段落数: 0';
-    });
-
-    // ── Tab switching ─────────────────────────────────────────────────────────
-    const tabWs      = document.getElementById('tab-ws');
-    const tabHttp    = document.getElementById('tab-http');
-    const panelWs    = document.getElementById('panel-ws');
-    const panelHttp  = document.getElementById('panel-http');
-    tabWs.addEventListener('click', () => {
-      tabWs.classList.add('active'); tabHttp.classList.remove('active');
-      panelWs.classList.add('active'); panelHttp.classList.remove('active');
-    });
-    tabHttp.addEventListener('click', () => {
-      tabHttp.classList.add('active'); tabWs.classList.remove('active');
-      panelHttp.classList.add('active'); panelWs.classList.remove('active');
-    });
-
-    // ── HTTP mode ─────────────────────────────────────────────────────────────
-    const btnHttpRec  = document.getElementById('btn-http-rec');
-    const btnHttpSend = document.getElementById('btn-http-send');
-    const httpStatus  = document.getElementById('http-status');
-    const httpTimer   = document.getElementById('http-timer');
-    const httpAudio   = document.getElementById('http-audio');
-
-    let httpRecording = false;
-    let httpMediaRecorder = null;
-    let httpChunks = [];
-    let httpStream = null;
-    let httpTimerInterval = null;
-    let httpStartTime = 0;
-    let httpBlob = null;
-
-    function httpSetStatus(text) { httpStatus.textContent = text; }
-    function httpFormatTime(ms) {
-      const s = Math.floor(ms/1000), m = Math.floor(s/60);
-      return String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+      if(msg.lines) for(const s of msg.lines) if(s.text&&s.text.trim()) commitFinal(s.text.trim());
+    } else {
+      const buf=msg.buffer_transcription||''; if(buf) setInterim(buf);
     }
+  }
 
-    btnHttpRec.addEventListener('click', async () => {
-      if (!httpRecording) {
-        // Start recording — reset previous state
-        if (httpAudio.src) { URL.revokeObjectURL(httpAudio.src); httpAudio.src=''; httpAudio.style.display='none'; }
-        httpBlob = null;
-        try {
-          httpStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        } catch(e) {
-          httpSetStatus('无法访问麦克风: ' + e.message); return;
-        }
-        httpChunks = [];
-        httpMediaRecorder = new MediaRecorder(httpStream);
-        httpMediaRecorder.ondataavailable = e => { if (e.data.size>0) httpChunks.push(e.data); };
-        httpMediaRecorder.start(100);
-        httpRecording = true;
-        btnHttpRec.className = 'http-rec-btn recording';
-        btnHttpRec.title = '点击停止录音';
-        btnHttpRec.textContent = '⏹';
-        btnHttpSend.disabled = true;
-        httpSetStatus('录音中…');
-        httpStartTime = Date.now();
-        httpTimerInterval = setInterval(() => { httpTimer.textContent = httpFormatTime(Date.now()-httpStartTime); }, 500);
-      } else {
-        // Stop recording
-        httpMediaRecorder.addEventListener('stop', () => {
-          httpBlob = new Blob(httpChunks, { type: httpMediaRecorder.mimeType || 'audio/webm' });
-          const url = URL.createObjectURL(httpBlob);
-          httpAudio.src = url;
-          httpAudio.style.display = 'block';
-        }, { once: true });
-        httpMediaRecorder.stop();
-        httpStream.getTracks().forEach(t => t.stop());
-        clearInterval(httpTimerInterval);
-        httpRecording = false;
-        btnHttpRec.className = 'http-rec-btn idle';
-        btnHttpRec.title = '点击重新录音';
-        btnHttpRec.textContent = '🎤';
-        httpSetStatus('录音完成，回听后可发送转录');
-        btnHttpSend.disabled = false;
-      }
+  // ── Mic start / stop ──
+  btnStart.addEventListener('click', async () => {
+    setLocked(true); segCount=0; infoSegs.textContent='段落: 0'; handshakeDone=false;
+    startDurTimer(); placeAnchor();
+    try { await setupAudio(); setStatus('正在连接…',''); connectWS(serverUrl.value.trim()); }
+    catch(e){ setStatus('错误: '+e.message,''); setLocked(false); }
+  });
+  btnStop.addEventListener('click', stopRecording);
+
+  function stopRecording() {
+    simCancelled = true;
+    if(ws&&ws.readyState===WebSocket.OPEN){ ws.send('END_OF_AUDIO'); setTimeout(()=>ws&&ws.close(),3000); }
+    _cleanup();
+  }
+  function stopRecordingNoSend() { simCancelled=true; if(ws)ws.close(); _cleanup(); }
+  function _cleanup() {
+    if(mediaStream){mediaStream.getTracks().forEach(t=>t.stop());mediaStream=null;}
+    if(workletNode){workletNode.disconnect();workletNode=null;}
+    if(audioCtx){audioCtx.close();audioCtx=null;}
+    if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+    stopMeter(); stopDurTimer(); setStatus('就绪',''); setLocked(false);
+  }
+
+  // ── Test connection ──
+  btnTest.addEventListener('click', async () => {
+    const healthUrl=serverUrl.value.trim().replace(/^ws/,'http').replace(/\/v1\/asr$/,'')+'/v1/health';
+    btnTest.disabled=true; btnTest.textContent='…';
+    try {
+      const d=await fetch(healthUrl).then(r=>r.json());
+      const ok=d.status==='ok';
+      btnTest.textContent=ok?'已连接':'异常';
+      connBadge.textContent=ok?`${d.model} · ${d.active_connections}/${d.max_clients}`:'';
+    } catch { btnTest.textContent='失败'; connBadge.textContent=''; }
+    setTimeout(()=>{btnTest.textContent='测试';btnTest.disabled=false;},2500);
+  });
+
+  // ── Copy / Clear ──
+  btnCopy.addEventListener('click', () => {
+    navigator.clipboard.writeText(box.innerText.replace(/\u200B/g,'').trim()).then(()=>{
+      btnCopy.textContent='已复制'; setTimeout(()=>btnCopy.textContent='复制',1200);
     });
+  });
+  btnClear.addEventListener('click', () => {
+    removeInterim();
+    if(anchor&&anchor.parentNode)anchor.parentNode.removeChild(anchor); anchor=null;
+    box.innerHTML='<span class="placeholder">转写内容将在此实时显示，也可直接编辑…</span>';
+    segCount=0; infoSegs.textContent='段落: 0'; infoDur.textContent='耗时: —';
+  });
 
-    btnHttpSend.addEventListener('click', async () => {
-      if (!httpBlob) return;
-      const baseUrl = serverUrl.value.trim().replace(/^ws/,'http').replace(/\/v1\/asr$/, '');
-      const form = new FormData();
-      form.append('file', httpBlob, 'recording.webm');
-      if (selLang.value) form.append('language', selLang.value);
-      form.append('task', selTask.value);
+  // ── File: drop zone & input ──
+  let selectedFile = null;
 
-      btnHttpSend.disabled = true;
-      btnHttpSend.textContent = '转录中…';
-      httpSetStatus('正在上传并转录…');
-      placeAnchor();
-      try {
-        const res = await fetch(baseUrl + '/v1/transcribe', { method: 'POST', body: form });
-        if (!res.ok) { const e = await res.json(); throw new Error(e.error||res.statusText); }
-        const data = await res.json();
-        if (data.text && data.text.trim()) {
-          clearPlaceholder();
-          commitFinal(data.text.trim());
-          httpSetStatus(`转录完成 · 语言: ${data.language} · 时长: ${data.duration.toFixed(1)}s`);
-        } else {
-          httpSetStatus('未检测到语音内容');
-        }
-      } catch(e) {
-        httpSetStatus('错误: ' + e.message);
-      }
-      btnHttpSend.textContent = '发送转录';
-      btnHttpSend.disabled = false;
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); if(e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+  fileInput.addEventListener('change', () => { if(fileInput.files[0]) loadFile(fileInput.files[0]); fileInput.value=''; });
+
+  function loadFile(file) {
+    selectedFile = file;
+    fileNameEl.textContent = file.name;
+    fileMetaEl.textContent = `${(file.size/1024).toFixed(0)} KB`;
+    const url = URL.createObjectURL(file);
+    if(fileAudio.src) URL.revokeObjectURL(fileAudio.src);
+    fileAudio.src = url;
+    fileInfoArea.style.display = '';
+    dropZone.style.display = 'none';
+    fileStatus.textContent = '';
+    streamProgress.style.display = 'none';
+
+    const ref = REF_TEXTS[file.name] || '';
+    if (ref) { refText.textContent=ref; refCard.style.display=''; }
+    else { refCard.style.display='none'; }
+  }
+
+  // ── File: stream via WS ──
+  btnStream.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    fileStatus.textContent = '解码中…';
+    setLocked(true); simCancelled=false;
+    startDurTimer();
+    segCount=0; infoSegs.textContent='段落: 0'; handshakeDone=false;
+    placeAnchor();
+
+    let pcmData;
+    try {
+      const buf = await selectedFile.arrayBuffer();
+      const tmpCtx = new AudioContext();
+      const decoded = await tmpCtx.decodeAudioData(buf);
+      await tmpCtx.close();
+      const outLen = Math.ceil(decoded.duration * 16000);
+      const offCtx = new OfflineAudioContext(1, outLen, 16000);
+      const src = offCtx.createBufferSource();
+      src.buffer = decoded; src.connect(offCtx.destination); src.start();
+      const rendered = await offCtx.startRendering();
+      pcmData = rendered.getChannelData(0);
+    } catch(e) { fileStatus.textContent='解码失败: '+e.message; setLocked(false); return; }
+
+    const total = pcmData.length;
+    const durSec = (total/16000).toFixed(1);
+    fileStatus.textContent = `${durSec}s · 连接中…`;
+
+    ws = new WebSocket(serverUrl.value.trim());
+    ws.binaryType = 'arraybuffer';
+    ws.onmessage = (e) => { if(typeof e.data!=='string')return; let m;try{m=JSON.parse(e.data);}catch{return;} handleMsg(m); };
+    ws.onerror = () => { fileStatus.textContent='连接失败'; setStatus('连接错误',''); setLocked(false); };
+    ws.onclose = () => { setStatus('已断开',''); handshakeDone=false; };
+    ws.onopen = () => { setStatus('已连接','connected'); uid=uuidv4(); ws.send(JSON.stringify({uid,language:selLang.value||null,task:selTask.value})); };
+
+    // Wait handshake
+    await new Promise(resolve => {
+      const orig = ws.onmessage;
+      ws.onmessage = (e) => {
+        if(typeof e.data!=='string')return; let m;try{m=JSON.parse(e.data);}catch{return;}
+        if(m.type==='config'){handshakeDone=true; setStatus('流式传输中…','recording'); startTime=Date.now(); timerInterval=setInterval(()=>{timerEl.textContent=fmtTime(Date.now()-startTime);},500); ws.onmessage=orig; resolve();}
+        else if(m.type==='error'){handleMsg(m);resolve();}
+      };
     });
+    if(!handshakeDone){setLocked(false);return;}
 
-    // ── Keyboard shortcuts ─────────────────────────────────────────────────────
-    document.addEventListener('keydown', e => {
-      if (e.target===box || e.target.tagName==='INPUT' || e.target.tagName==='SELECT') return;
-      if (e.code==='Space') { e.preventDefault(); btnStart.disabled ? (btnStop.disabled||btnStop.click()) : btnStart.click(); }
-      if (e.code==='Escape' && !btnStop.disabled) btnStop.click();
-      if (e.code==='KeyC' && !e.metaKey && !e.ctrlKey && !btnCopy.disabled) btnCopy.click();
-    });
+    const CHUNK=1600, INTERVAL=100;
+    streamProgress.style.display=''; streamProgressFill.style.width='0%';
+    fileStatus.textContent=`0 / ${durSec}s`;
 
-    // ── FAB sync ──────────────────────────────────────────────────────────────
-    const fabStart=document.getElementById('btn-start-fab');
-    const fabStop=document.getElementById('btn-stop-fab');
-    fabStart.addEventListener('click',()=>btnStart.click());
-    fabStop.addEventListener('click',()=>btnStop.click());
-    const fabObs=new MutationObserver(()=>{ fabStart.disabled=btnStart.disabled; fabStop.disabled=btnStop.disabled; });
-    fabObs.observe(btnStart,{attributes:true,attributeFilter:['disabled']});
-    fabObs.observe(btnStop,{attributes:true,attributeFilter:['disabled']});
+    for(let off=0; off<total; off+=CHUNK){
+      if(simCancelled||!ws||ws.readyState!==WebSocket.OPEN) break;
+      ws.send(pcmData.slice(off, Math.min(off+CHUNK, total)).buffer);
+      const pct = Math.min(100, off/total*100);
+      streamProgressFill.style.width = pct+'%';
+      fileStatus.textContent = `${(off/16000).toFixed(1)} / ${durSec}s`;
+      await new Promise(r=>setTimeout(r,INTERVAL));
+    }
+    streamProgressFill.style.width = '100%';
 
-    // ── Init ──────────────────────────────────────────────────────────────────
-    resizeCanvas(); startIdleAnimation();
-    window.addEventListener('resize',()=>{ if(!meterRaf) drawIdleFrame(); });
-  })();
-  </script>
+    if(ws&&ws.readyState===WebSocket.OPEN){ws.send('END_OF_AUDIO'); fileStatus.textContent='等待结果…'; setTimeout(()=>{if(ws)ws.close();},5000);}
+    if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+    stopDurTimer(); setStatus('完成','connected'); fileStatus.textContent=`完成 · ${durSec}s`;
+    setLocked(false);
+  });
+
+  // ── File: HTTP upload ──
+  btnUpload.addEventListener('click', async () => {
+    if (!selectedFile) return;
+    const baseUrl = serverUrl.value.trim().replace(/^ws/,'http').replace(/\/v1\/asr$/,'');
+    const form = new FormData();
+    form.append('file', selectedFile, selectedFile.name);
+    if(selLang.value) form.append('language', selLang.value);
+    form.append('task', selTask.value);
+
+    setLocked(true); fileStatus.textContent='上传中…';
+    startDurTimer();
+    try {
+      const res = await fetch(baseUrl+'/v1/transcribe',{method:'POST',body:form});
+      if(!res.ok){const e=await res.json();throw new Error(e.error||res.statusText);}
+      const data = await res.json();
+      stopDurTimer();
+      if(data.text&&data.text.trim()){
+        fileStatus.textContent=`完成 · ${data.language} · ${data.duration.toFixed(1)}s`;
+        // Write result into transcript box
+        clearPlaceholder(); placeAnchor();
+        for(const seg of (data.segments||[])) if(seg.text&&seg.text.trim()) commitFinal(seg.text.trim());
+      } else { fileStatus.textContent='未检测到语音'; }
+    } catch(e){ stopDurTimer(); fileStatus.textContent='错误: '+e.message; }
+    setLocked(false);
+  });
+
+  // ── Keyboard shortcuts ──
+  document.addEventListener('keydown', e => {
+    if(e.target===box||e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return;
+    if(e.code==='Space'){e.preventDefault(); if(currentSource==='mic'){btnStart.disabled?(btnStop.disabled||btnStop.click()):btnStart.click();}}
+    if(e.code==='Escape'&&!btnStop.disabled) btnStop.click();
+    if(e.code==='KeyC'&&!e.metaKey&&!e.ctrlKey) btnCopy.click();
+  });
+
+  // ── FAB ──
+  const fabStart=$('btn-start-fab'),fabStop=$('btn-stop-fab');
+  fabStart.addEventListener('click',()=>btnStart.click());
+  fabStop.addEventListener('click',()=>btnStop.click());
+  new MutationObserver(()=>{fabStart.disabled=btnStart.disabled;fabStop.disabled=btnStop.disabled;})
+    .observe(btnStart,{attributes:true,attributeFilter:['disabled']});
+
+  // ── Init ──
+  resizeCanvas(); startIdle();
+  window.addEventListener('resize', () => { if(!meterRaf) drawIdle(); });
+
+  // Auto-test on load
+  btnTest.click();
+})();
+</script>
 </body>
 </html>
