@@ -15,21 +15,24 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Model cache mount point
-RUN mkdir -p /models
-
-# Download model during build so the image is self-contained
-ARG MODEL_SIZE=large-v3-turbo
+# Download model during build (baked into image at /models-baked)
+ARG MODEL_SIZE=tiny
 ARG HF_ENDPOINT=https://hf-mirror.com
 ENV HF_ENDPOINT=${HF_ENDPOINT}
-RUN python -c "from faster_whisper import WhisperModel; WhisperModel('${MODEL_SIZE}', device='cpu', compute_type='int8', download_root='/models')"
+RUN mkdir -p /models-baked && \
+    python -c "from faster_whisper import WhisperModel; WhisperModel('${MODEL_SIZE}', device='cpu', compute_type='int8', download_root='/models-baked')"
+
+# Runtime mount point — entrypoint will copy baked model if /models is empty
+RUN mkdir -p /models
 
 EXPOSE 9090
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
     CMD curl -f http://localhost:9090/v1/health || exit 1
 
-CMD ["python", "-m", "uvicorn", "main:app", \
-     "--host", "0.0.0.0", \
-     "--port", "9090", \
-     "--workers", "1"]
+CMD ["sh", "-c", "\
+    if [ -z \"$(ls -A /models 2>/dev/null)\" ]; then \
+        echo 'Copying baked model to /models...'; \
+        cp -a /models-baked/. /models/; \
+    fi && \
+    exec python -m uvicorn main:app --host 0.0.0.0 --port 9090 --workers 1"]

@@ -33,9 +33,8 @@ async def handle_session(websocket: WebSocket, settings) -> None:
 
     await websocket.accept()
 
-    # Enforce connection limit (use max_connections if set, else max_clients)
-    effective_max = settings.max_connections if settings.max_connections else settings.max_clients
-    if _active_connections >= effective_max:
+    # Enforce connection limit
+    if _active_connections >= settings.max_clients:
         err = ErrorMessage(uid="", code="MAX_CLIENTS_REACHED", message="Server is at capacity.")
         await websocket.send_text(err.model_dump_json())
         await websocket.close()
@@ -77,7 +76,7 @@ async def handle_session(websocket: WebSocket, settings) -> None:
         pipeline.start()
 
         # Determine effective session timeout
-        session_timeout = settings.session_timeout_sec if settings.session_timeout_sec else settings.max_connection_time
+        session_timeout = settings.session_timeout_sec if settings.session_timeout_sec else None
         silence_timeout = settings.silence_timeout_sec if settings.silence_timeout_sec else None
 
         try:

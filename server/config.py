@@ -4,7 +4,9 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Model
-    model_size: str = "large-v3-turbo"
+    # 可选: tiny, tiny.en, base, base.en, small, small.en, medium, medium.en,
+    #       large-v1, large-v2, large-v3, large-v3-turbo, distil-large-v2, distil-large-v3
+    model_size: str = "medium"
     device: str = "auto"
     compute_type: str = "int8"
     model_cache_dir: str = "/models"
@@ -26,14 +28,10 @@ class Settings(BaseSettings):
     # Server
     host: str = "0.0.0.0"
     port: int = 9090
-    max_clients: int = 10
-    max_connection_time: int = 600
+    max_clients: int = 10              # 最大并发连接数 + 线程池大小
+    session_timeout_sec: float = 60    # 单会话超时 (秒), 0=不限
+    silence_timeout_sec: float = 5     # 持续静音断开 (秒), 0=不断开
     log_level: str = "INFO"
-
-    # Connection limits
-    max_connections: int = 3        # 0 = unlimited (max_clients takes precedence if set)
-    session_timeout_sec: float = 60  # 0 = no timeout (overrides max_connection_time if set)
-    silence_timeout_sec: float = 5  # 0 = disabled; close if no speech within this many seconds
 
     class Config:
         env_file = ".env"
