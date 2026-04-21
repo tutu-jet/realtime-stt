@@ -1,0 +1,42 @@
+apiVersion: ai.sap.com/v1alpha1
+kind: ServingTemplate
+metadata:
+  name: whisperlive-gpu-serving
+  annotations:
+    scenarios.ai.sap.com/description: "SAP for Me whisperlive scenario"
+    scenarios.ai.sap.com/name: "whisperlive-scenario"
+    executables.ai.sap.com/description: "Inference executable for whisper results"
+    executables.ai.sap.com/name: "whisperlive-gpu-executable"
+  labels:
+    scenarios.ai.sap.com/id: "whisperlive-gpu-scenario"
+    executables.ai.sap.com/id: "whisperlive-gpu-executable"
+    ai.sap.com/version: "1.0.0"
+spec:
+  template:
+    apiVersion: "serving.kserve.io/v1beta1"
+    metadata:
+      labels: |
+        ai.sap.com/resourcePlan: infer.l
+    spec: |
+      predictor:
+        imagePullSecrets:
+          - name: mobiledocker
+        containers:
+        - name: kserve-container
+          image: "wow.common.repositories.cloud.sap/mobile/realtime-stt-gpu:1.0.0"
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          env:
+            - name: MODEL_SIZE
+              value: "large-v3-turbo"
+            - name: MODEL_CACHE_DIR
+              value: "/models-baked"
+            - name: DEVICE
+              value: "cuda"
+            - name: COMPUTE_TYPE
+              value: "float16"
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              set -e && echo "Starting" && python -m uvicorn main:app --host 0.0.0.0 --port 8080 --workers 1

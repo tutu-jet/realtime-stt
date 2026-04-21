@@ -1,12 +1,20 @@
-FROM python:3.11-slim
+FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
 
-# System dependencies: ffmpeg for audio decode, libgomp for faster-whisper
+ENV DEBIAN_FRONTEND=noninteractive
+
+# System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 python3.11-venv python3.11-dev python3-pip \
     ffmpeg \
     libgomp1 \
     build-essential \
     curl \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python3 \
     && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip
+RUN python -m pip install --no-cache-dir --upgrade pip
 
 WORKDIR /app
 
@@ -16,7 +24,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Download model during build (baked into image at /models-baked)
-ARG MODEL_SIZE=tiny
+ARG MODEL_SIZE=large-v3-turbo
 ARG HF_ENDPOINT=https://hf-mirror.com
 ENV HF_ENDPOINT=${HF_ENDPOINT}
 RUN mkdir -p /models-baked && \

@@ -6,9 +6,9 @@ class Settings(BaseSettings):
     # Model
     # 可选: tiny, tiny.en, base, base.en, small, small.en, medium, medium.en,
     #       large-v1, large-v2, large-v3, large-v3-turbo, distil-large-v2, distil-large-v3
-    model_size: str = "medium"
+    model_size: str = "large-v3-turbo"
     device: str = "auto"
-    compute_type: str = "int8"
+    compute_type: str = "float16"
     model_cache_dir: str = "/models"
 
     # VAD
